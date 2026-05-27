@@ -1,0 +1,11 @@
+{{ object.title }}
+{{ object.employee.username }}
+{{ object.employee.first_name }}
+{{ object.employee.last_name }}
+{{ object.status }}
+{% for item in object.line_items.all %}
+{{ item.merchant_name }}
+{{ item.category }}
+{{ item.project_cost_centre }}
+{{ item.description }}
+{% endfor %}

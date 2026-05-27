@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense processing platform - Vault Portal</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Ionicons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Alpine.js & Axios -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --primary: #a855f7;
+            --primary-glow: rgba(168, 85, 247, 0.4);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass-bg: rgba(30, 41, 59, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism utilities */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(168, 85, 247, 0.2);
+            box-shadow: 0 12px 40px 0 rgba(168, 85, 247, 0.1);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            color: var(--primary);
+            -webkit-text-fill-color: initial;
+        }
+
+        .user-status {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .trust-gauge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .trust-gauge.low {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px 0 var(--primary-glow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 var(--primary-glow);
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            box-shadow: none;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 2rem;
+            flex-grow: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Forms styling */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-family: var(--font-family);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Line items list styling */
+        .line-items-container {
+            margin-top: 2rem;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 1.5rem;
+        }
+
+        .line-item-card {
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .line-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Upload area */
+        .upload-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(15, 23, 42, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(168, 85, 247, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        /* Claims List Panel */
+        .panel {
+            padding: 1.75rem;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box input {
+            padding-left: 2.5rem;
+        }
+
+        .search-box ion-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .claims-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 550px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        /* Custom Scrollbar */
+        .claims-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .claims-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .claims-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .claims-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .claim-row {
+            padding: 1rem;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .claim-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .claim-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .claim-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .claim-amount {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .claim-bottom {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-draft { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+        .status-submitted { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .status-fasttrack { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .status-review { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .status-escalated { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .status-paid { background: rgba(168, 85, 247, 0.15); color: var(--primary); }
+
+        /* Login view */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(24px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .login-box {
+            max-width: 420px;
+            width: 100%;
+            padding: 2.5rem;
+        }
+
+        /* Notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            background: #1e293b;
+            border: 1px solid var(--glass-border);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            animation: toastIn 0.3s ease;
+        }
+
+        @keyframes toastIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body x-data="vaultApp()">
+
+    <!-- Toast Notification -->
+    <template x-if="toast">
+        <div class="toast">
+            <ion-icon :name="toast.type === 'success' ? 'checkmark-circle' : 'alert-circle'" 
+                      :style="{ color: toast.type === 'success' ? 'var(--success)' : 'var(--danger)' }"></ion-icon>
+            <span x-text="toast.message"></span>
+        </div>
+    </template>
+
+    <!-- Login Dialog (shown if not authenticated) -->
+    <div class="login-overlay" x-show="!authenticated">
+        <div class="glass-card login-box">
+            <div class="logo-area" style="justify-content: center; margin-bottom: 2rem;">
+                <ion-icon name="shield-half-outline" class="logo-icon"></ion-icon>
+                <span>THE VAULT</span>
+            </div>
+            <h3 style="text-align: center; margin-bottom: 1.5rem; font-weight: 700;">Enterprise Sign In</h3>
+            
+            <form @submit.prevent="login()">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" x-model="loginForm.username" required placeholder="e.g. employee1042">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" x-model="loginForm.password" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;" :disabled="loading">
+                    <span x-show="!loading">Authenticate</span>
+                    <span x-show="loading">Securing Session...</span>
+                </button>
+            </form>
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+                Secured by SimpleJWT / LDAP Active Directory
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header>
+        <div class="logo-area">
+            <ion-icon name="shield-half-outline" class="logo-icon"></ion-icon>
+            <span>THE VAULT</span>
+        </div>
+        <div class="user-status" x-show="authenticated">
+            <div class="trust-gauge" :class="user.trust_score < 70 ? 'low' : ''">
+                <ion-icon name="ribbon-outline"></ion-icon>
+                <span>Trust Score: <strong x-text="user.trust_score"></strong>%</span>
+            </div>
+            <div style="font-size: 0.9rem; text-align: right;">
+                <div style="font-weight: 700;" x-text="user.username"></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Emp ID: <span x-text="user.employee_id || user.id"></span></div>
+            </div>
+            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" @click="logout()">
+                <ion-icon name="log-out-outline"></ion-icon>
+            </button>
+        </div>
+    </header>
+
+    <!-- App Main Body Container -->
+    <div class="container" x-show="authenticated">
+        
+        <!-- Left Side: Claim Form (submit) -->
+        <main class="glass-card panel">
+            <h2>
+                <ion-icon name="document-text-outline" style="color: var(--primary)"></ion-icon>
+                Submit Expense Claim
+            </h2>
+            
+            <form @submit.prevent="submitClaim()">
+                <div class="form-group">
+                    <label>Claim Description / Title</label>
+                    <input type="text" x-model="claimForm.title" required placeholder="e.g. Chennai Client Trip - May">
+                </div>
+
+                <div class="line-items-container">
+                    <h3 style="margin-bottom: 1.25rem; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Expense Line Items</span>
+                        <button type="button" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" @click="addLineItem()">
+                            <ion-icon name="add-outline"></ion-icon> Add Line
+                        </button>
+                    </h3>
+
+                    <!-- Dynamic list of Line Items -->
+                    <template x-for="(item, index) in claimForm.line_items" :key="index">
+                        <div class="line-item-card">
+                            <div class="line-item-header">
+                                <span>Item #<span x-text="index + 1"></span></span>
+                                <button type="button" class="btn-danger btn" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" 
+                                        @click="removeLineItem(index)" x-show="claimForm.line_items.length > 1">
+                                    <ion-icon name="trash-outline"></ion-icon> Remove
+                                </button>
+                            </div>
+
+                            <div class="input-row">
+                                <div class="form-group">
+                                    <label>Expense Date</label>
+                                    <input type="date" x-model="item.expense_date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Merchant Name</label>
+                                    <input type="text" x-model="item.merchant_name" required placeholder="e.g. Ola Cabs">
+                                </div>
+                            </div>
+
+                            <div class="input-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <select x-model="item.category" required>
+                                        <option value="Local Travel">Local Travel</option>
+                                        <option value="Meals & Entertainment">Meals & Entertainment</option>
+                                        <option value="Flights">Flights</option>
+                                        <option value="Lodging">Lodging</option>
+                                        <option value="Office Supplies">Office Supplies</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount</label>
+                                    <input type="number" step="0.01" x-model="item.amount" required placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label>Currency</label>
+                                    <input type="text" x-model="item.currency_code" required placeholder="INR" maxlength="3">
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <div class="form-group">
+                                    <label>Payment Mode</label>
+                                    <select x-model="item.payment_mode" required>
+                                        <option value="cash">Cash</option>
+                                        <option value="corporate_card">Corporate Card</option>
+                                        <option value="personal_card">Personal Card</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Project / Cost Center</label>
+                                    <input type="text" x-model="item.project_cost_centre" required placeholder="e.g. Sales-APAC">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea rows="2" x-model="item.description" placeholder="Short description of the charge"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Receipt Attachment</label>
+                                <div class="upload-zone" @click="$refs['fileInput' + index].click()">
+                                    <ion-icon name="cloud-upload-outline" class="upload-icon"></ion-icon>
+                                    <div style="font-weight: 500;">
+                                        <span x-text="item.file_name || 'Upload receipt file (JPEG/PNG/PDF)'"></span>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">Max size 5MB</div>
+                                    <input type="file" :x-ref="'fileInput' + index" style="display: none;" 
+                                           @change="handleFileUpload($event, index)">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn" :disabled="submitting">
+                        <ion-icon name="paper-plane-outline" x-show="!submitting"></ion-icon>
+                        <span x-show="!submitting">Submit Claim</span>
+                        <span x-show="submitting">Processing Pipelines...</span>
+                    </button>
+                </div>
+            </form>
+        </main>
+
+        <!-- Right Side: Claims History & Search -->
+        <aside style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <!-- Quick search & History -->
+            <div class="glass-card panel">
+                <h2>
+                    <ion-icon name="history-outline" style="color: var(--primary)"></ion-icon>
+                    Historical Logs
+                </h2>
+                
+                <div class="search-box">
+                    <ion-icon name="search-outline"></ion-icon>
+                    <input type="text" x-model="searchQuery" @input.debounce.300ms="searchClaims()" 
+                           placeholder="Search logs by keyword...">
+                </div>
+
+                <div class="claims-list">
+                    <template x-for="claim in claims" :key="claim.id">
+                        <div class="claim-row" @click="viewClaimDetail(claim)">
+                            <div class="claim-meta">
+                                <span class="claim-title" x-text="claim.title"></span>
+                                <span class="claim-amount" x-text="formatCurrency(claim.total_amount)"></span>
+                            </div>
+                            <div class="claim-bottom">
+                                <span x-text="formatDate(claim.created_at)"></span>
+                                <span class="status-badge" :class="getStatusClass(claim.status)" x-text="claim.status"></span>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="claims.length === 0" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        No expense logs found.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail modal/card -->
+            <div class="glass-card panel" x-show="selectedClaim" style="animation: slideIn 0.3s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <h3 x-text="selectedClaim?.title" style="font-weight: 700; color: var(--primary);"></h3>
+                    <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" @click="selectedClaim = null">
+                        Close
+                    </button>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div><strong>Submitted On:</strong> <span x-text="formatDate(selectedClaim?.created_at)"></span></div>
+                    <div><strong>Status:</strong> <span class="status-badge" :class="getStatusClass(selectedClaim?.status)" x-text="selectedClaim?.status"></span></div>
+                    <div><strong>Total Amount:</strong> <span class="claim-amount" x-text="formatCurrency(selectedClaim?.total_amount)"></span></div>
+                    <div><strong>Employee Details:</strong> <span x-text="selectedClaim?.employee_details?.username"></span> (ID: <span x-text="selectedClaim?.employee_details?.employee_id"></span>)</div>
+                </div>
+
+                <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">
+                    Line Items & AI Results
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <template x-for="item in selectedClaim?.line_items" :key="item.id">
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.25rem;">
+                                <span x-text="item.merchant_name"></span>
+                                <span x-text="formatCurrency(item.amount, item.currency_code)"></span>
+                            </div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.5rem;">
+                                <span x-text="item.expense_date"></span> | <span x-text="item.category"></span> | <span x-text="item.project_cost_centre"></span>
+                            </div>
+                            <!-- AI Metrics -->
+                            <div style="display: flex; gap: 0.75rem; font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem; margin-top: 0.5rem;">
+                                <span style="display: flex; align-items: center; gap: 2px;">
+                                    <ion-icon name="eye-outline"></ion-icon>
+                                    OCR Confidence: <strong x-text="item.ocr_confidence !== null ? (item.ocr_confidence * 100).toFixed(0) + '%' : 'N/A'"></strong>
+                                </span>
+                                <span style="display: flex; align-items: center; gap: 2px;">
+                                    <ion-icon name="alert-circle-outline"></ion-icon>
+                                    Anomaly Status: <strong :style="{ color: item.anomaly_status === 'NORMAL' ? 'var(--success)' : 'var(--danger)' }" x-text="item.anomaly_status"></strong>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- App Logic -->
+    <script>
+        function vaultApp() {
+            return {
+                authenticated: false,
+                loading: false,
+                submitting: false,
+                toast: null,
+                searchQuery: '',
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                user: {
+                    id: null,
+                    username: '',
+                    trust_score: 85,
+                    employee_id: null
+                },
+                claimForm: {
+                    title: '',
+                    line_items: []
+                },
+                claims: [],
+                selectedClaim: null,
+                token: null,
+
+                init() {
+                    // Check local storage for existing token
+                    const savedToken = localStorage.getItem('vault_token');
+                    if (savedToken) {
+                        this.token = savedToken;
+                        this.authenticated = true;
+                        axios.defaults.headers.common['Authorization'] = 'Bearer ' + this.token;
+                        this.fetchUserProfile();
+                        this.fetchClaims();
+                    }
+                    this.resetClaimForm();
+                },
+
+                showToast(message, type = 'success') {
+                    this.toast = { message, type };
+                    setTimeout(() => {
+                        this.toast = null;
+                    }, 4000);
+                },
+
+                resetClaimForm() {
+                    this.claimForm = {
+                        title: '',
+                        line_items: [this.getBlankLineItem()]
+                    };
+                },
+
+                getBlankLineItem() {
+                    return {
+                        expense_date: new Date().toISOString().split('T')[0],
+                        merchant_name: '',
+                        category: 'Local Travel',
+                        amount: '',
+                        currency_code: 'INR',
+                        payment_mode: 'cash',
+                        project_cost_centre: '',
+                        description: '',
+                        file: null,
+                        file_name: ''
+                    };
+                },
+
+                addLineItem() {
+                    this.claimForm.line_items.push(this.getBlankLineItem());
+                },
+
+                removeLineItem(index) {
+                    this.claimForm.line_items.splice(index, 1);
+                },
+
+                handleFileUpload(event, index) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            this.showToast('File size must be less than 5MB', 'error');
+                            return;
+                        }
+                        this.claimForm.line_items[index].file = file;
+                        this.claimForm.line_items[index].file_name = file.name;
+                        this.showToast(`File "${file.name}" attached successfully`);
+                    }
+                },
+
+                async login() {
+                    this.loading = true;
+                    try {
+                        const response = await axios.post('/api/v1/auth/login/', this.loginForm);
+                        this.token = response.data.access;
+                        localStorage.setItem('vault_token', this.token);
+                        axios.defaults.headers.common['Authorization'] = 'Bearer ' + this.token;
+                        
+                        this.authenticated = true;
+                        await this.fetchUserProfile();
+                        await this.fetchClaims();
+                        this.showToast('Authentication successful!');
+                    } catch (error) {
+                        console.error(error);
+                        this.showToast('Invalid credentials or LDAP error', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                logout() {
+                    this.token = null;
+                    this.authenticated = false;
+                    this.claims = [];
+                    this.selectedClaim = null;
+                    localStorage.removeItem('vault_token');
+                    delete axios.defaults.headers.common['Authorization'];
+                    this.showToast('Logged out successfully');
+                },
+
+                async fetchUserProfile() {
+                    try {
+                        const response = await axios.get('/api/v1/auth/me/');
+                        this.user = response.data;
+                    } catch (error) {
+                        console.error('Failed to fetch user profile:', error);
+                        this.logout();
+                    }
+                },
+
+                async fetchClaims() {
+                    try {
+                        const response = await axios.get('/api/v1/expenses/');
+                        this.claims = response.data;
+                    } catch (error) {
+                        console.error('Failed to fetch claims:', error);
+                    }
+                },
+
+                async searchClaims() {
+                    if (!this.searchQuery) {
+                        this.fetchClaims();
+                        return;
+                    }
+                    try {
+                        const response = await axios.get(`/api/v1/expenses/search/?q=${encodeURIComponent(this.searchQuery)}`);
+                        this.claims = response.data;
+                    } catch (error) {
+                        console.error('Search failed:', error);
+                    }
+                },
+
+                async submitClaim() {
+                    this.submitting = true;
+                    try {
+                        const formData = new FormData();
+                        
+                        // Prepare the JSON payload fields
+                        const payload = {
+                            claim_title: this.claimForm.title,
+                            status: 'SUBMITTED',
+                            line_items: this.claimForm.line_items.map(item => ({
+                                expense_date: item.expense_date,
+                                merchant_name: item.merchant_name,
+                                category: item.category,
+                                amount: parseFloat(item.amount),
+                                currency_code: item.currency_code,
+                                payment_mode: item.payment_mode,
+                                project_cost_centre: item.project_cost_centre,
+                                description: item.description
+                            }))
+                        };
+
+                        // Append stringified JSON payload
+                        formData.append('payload', JSON.stringify(payload));
+
+                        // Append physical file binaries
+                        this.claimForm.line_items.forEach((item, index) => {
+                            if (item.file) {
+                                formData.append(`receipt_${index}`, item.file);
+                            }
+                        });
+
+                        const response = await axios.post('/api/v1/expenses/submit/', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+
+                        this.showToast('Claim submitted successfully! AI Pipeline verified.');
+                        this.resetClaimForm();
+                        
+                        // Refresh state
+                        await this.fetchUserProfile();
+                        await this.fetchClaims();
+                    } catch (error) {
+                        console.error('Failed to submit claim:', error);
+                        this.showToast('Submission failed. Check details.', 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
+                viewClaimDetail(claim) {
+                    this.selectedClaim = claim;
+                },
+
+                formatCurrency(val, currency = 'INR') {
+                    if (val === undefined || val === null) return '';
+                    return parseFloat(val).toLocaleString('en-IN', {
+                        style: 'currency',
+                        currency: currency
+                    });
+                },
+
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                getStatusClass(status) {
+                    if (!status) return '';
+                    const map = {
+                        'DRAFT': 'status-draft',
+                        'SUBMITTED': 'status-submitted',
+                        'FAST_TRACK': 'status-fasttrack',
+                        'MANAGER_REVIEW': 'status-review',
+                        'ESCALATED': 'status-escalated',
+                        'PAID': 'status-paid'
+                    };
+                    return map[status] || 'status-submitted';
+                }
+            };
+        }
+    </script>
+</body>
+</html>
