@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: expense-db
+    environment:
+      POSTGRES_DB: expense_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/db-init:/docker-entrypoint-initdb.d
+    networks:
+      - expense-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: expense-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - expense-network
+
+  core-platform:
+    build:
+      context: ./core-platform
+      dockerfile: Dockerfile
+    container_name: django-core
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./core-platform:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-key-for-local-dev-12345
+      - DB_NAME=expense_platform
+      - DB_USER=postgres
+      - DB_PASSWORD=password123
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - OCR_SIDECAR_URL=http://ocr-sidecar:8001
+      - AI_SIDECAR_URL=http://ai-sidecar:8002
+    depends_on:
+      - db
+      - redis
+      - ocr-sidecar
+      - ai-sidecar
+    networks:
+      - expense-network
+
+  ocr-sidecar:
+    build:
+      context: ./ocr-sidecar
+      dockerfile: Dockerfile
+    container_name: ocr-sidecar
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./ocr-sidecar:/app
+    ports:
+      - "8001:8001"
+    networks:
+      - expense-network
+
+  ai-sidecar:
+    build:
+      context: ./ai-sidecar
+      dockerfile: Dockerfile
+    container_name: ai-sidecar
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    volumes:
+      - ./ai-sidecar:/app
+    ports:
+      - "8002:8002"
+    networks:
+      - expense-network
+
+volumes:
+  pgdata:
+
+networks:
+  expense-network:
+    driver: bridge

@@ -1,0 +1,14 @@
+Django==4.2.27
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.3.1
+django-redis==5.4.0
+redis==5.0.1
+django-microsoft-auth==3.0.1
+django-haystack==3.3.0
+Whoosh==2.7.4
+# psycopg2-binary is installed directly in the Dockerfile for production PostgreSQL support
+httpx==0.27.0
+whitenoise==6.6.0
+django-compressor==4.4
+drf-yasg==1.21.7
+setuptools<70.0.0
