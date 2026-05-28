@@ -113,6 +113,8 @@ class ExpensePlatformTests(TestCase):
         self.assertEqual(claim.title, "Chennai Client Trip - May")
         self.assertEqual(claim.status, "FAST_TRACK")
         self.assertEqual(claim.total_amount, 460.00)
+        self.assertEqual(claim.adjusted_trust_score, 88)
+        self.assertEqual(claim.recommended_route, "FAST_TRACK")
         
         # Check user trust score updated
         self.user.refresh_from_db()
@@ -136,3 +138,65 @@ class ExpensePlatformTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['title'], "Chennai Client Trip")
+
+    def test_finance_csv_export_access(self):
+        # Authenticated as regular employee (self.user is not staff)
+        url = reverse('finance_csv_export')
+        response = self.client.get(url)
+        # Should be forbidden for non-staff
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Unauthenticated user
+        self.client.force_authenticate(user=None)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_finance_csv_export_data(self):
+        # Create staff user
+        staff_user = User.objects.create_user(
+            username='staffadmin',
+            password='password123',
+            is_staff=True
+        )
+        self.client.force_authenticate(user=staff_user)
+
+        # Create claims with various statuses
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Approved Claim",
+            total_amount=250.00,
+            status="APPROVED",
+            adjusted_trust_score=90,
+            recommended_route="APPROVED"
+        )
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Fast Track Claim",
+            total_amount=150.00,
+            status="FAST_TRACK",
+            adjusted_trust_score=95,
+            recommended_route="FAST_TRACK"
+        )
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Draft Claim",
+            total_amount=500.00,
+            status="DRAFT"
+        )
+
+        url = reverse('finance_csv_export')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment', response['Content-Disposition'])
+
+        # Decode CSV content and check lines
+        content = response.content.decode('utf-8')
+        lines = content.strip().split('\r\n')
+        
+        # Header + 2 claims (Approved & Fast Track) = 3 lines total
+        self.assertEqual(len(lines), 3)
+        self.assertIn('Approved Claim', content)
+        self.assertIn('Fast Track Claim', content)
+        self.assertNotIn('Draft Claim', content)

@@ -173,6 +173,8 @@ class ExpenseClaimSerializer(serializers.ModelSerializer):
         
         # 5. Apply Trust Engine results back to monolith state
         claim.status = eval_result.get('recommended_route', 'MANAGER_REVIEW')
+        claim.adjusted_trust_score = eval_result.get('adjusted_trust_score', user.trust_score)
+        claim.recommended_route = eval_result.get('recommended_route', 'MANAGER_REVIEW')
         claim.save()
         
         # Update user's trust score

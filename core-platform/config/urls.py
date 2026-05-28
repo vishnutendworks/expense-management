@@ -5,6 +5,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.conf import settings
 from django.conf.urls.static import static
+from expenses.views import FinanceCSVExportView
 
 # Swagger documentation setup
 schema_view = get_schema_view(
@@ -34,6 +35,9 @@ urlpatterns = [
     
     # Expenses App APIs & UI Pages
     path('api/v1/expenses/', include('expenses.urls')),
+    
+    # Finance APIs
+    path('api/v1/finance/export/', FinanceCSVExportView.as_view(), name='finance_csv_export'),
     
     # Optional Server-rendered UI Pages
     path('', include('expenses.ui_urls')),

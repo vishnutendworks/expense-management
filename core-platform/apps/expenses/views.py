@@ -6,6 +6,8 @@ from .models import ExpenseClaim
 from .serializers import ExpenseClaimSerializer
 from haystack.query import SearchQuerySet
 import logging
+import csv
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
@@ -91,3 +93,45 @@ class ExpenseClaimSearchView(APIView):
                 
             serializer = ExpenseClaimSerializer(queryset.distinct(), many=True, context={'request': request})
             return Response(serializer.data)
+
+class FinanceCSVExportView(APIView):
+    """
+    Export all claims with status APPROVED or FAST_TRACK to a downloadable CSV.
+    Only accessible by authenticated staff/admin users.
+    """
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        # Create the HttpResponse object with the appropriate CSV header.
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="approved_claims_export.csv"'
+
+        writer = csv.writer(response)
+        # Write headers
+        writer.writerow([
+            'Claim ID', 'Employee ID', 'Employee Username', 'Title', 
+            'Total Amount', 'Status', 'Adjusted Trust Score', 
+            'Recommended Route', 'Created At'
+        ])
+
+        # Query claims matching the status
+        claims = ExpenseClaim.objects.filter(
+            status__in=['APPROVED', 'FAST_TRACK']
+        ).order_by('-created_at')
+
+        # Write data rows
+        for claim in claims:
+            writer.writerow([
+                claim.id,
+                claim.employee.employee_id or claim.employee.id,
+                claim.employee.username,
+                claim.title,
+                claim.total_amount,
+                claim.status,
+                claim.adjusted_trust_score if claim.adjusted_trust_score is not None else '',
+                claim.recommended_route or '',
+                claim.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+
+        return response
+
