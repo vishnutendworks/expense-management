@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+
+# Import your AI engines
 from app.engines.trust_engine import calculate_trust_score
+from app.anomaly_guard import analyze_expense_patterns
 
 app = FastAPI(title="AI Intelligence & Routing Sidecar")
 
@@ -47,9 +50,17 @@ class PolicyEvaluation(BaseModel):
     status_color: str
     message: str
 
-class DuplicateCheckResult(BaseModel):
-    risk_level: str
-    message: str
+# New Schemas for the Anomaly Guard Engine
+class ExpenseRecord(BaseModel):
+    date: str
+    merchant: str
+    amount: float
+    category: str
+
+class AnomalyRequest(BaseModel):
+    new_expense: ExpenseRecord
+    historical_data: List[ExpenseRecord]
+
 
 # --- ROUTING ENDPOINT ---
 @app.post("/api/v1/evaluate-claim", response_model=EvaluationResponseSchema)
@@ -108,7 +119,13 @@ async def evaluate_policy_line(expense: ExpenseLine):
     return PolicyEvaluation(status_color="Green", message="Within your allowed limit.")
 
 # --- AI FEATURE 3: DUPLICATE & ANOMALY GUARD ---
-@app.post("/api/v1/policy/check-duplicates", response_model=DuplicateCheckResult)
-async def check_duplicates(expense: ExpenseLine):
-    # Standard DB query placeholder
-    return DuplicateCheckResult(risk_level="Normal", message="No exact duplicates found in recent history.")
+@app.post("/api/v1/policy/check-anomaly")
+async def check_anomaly(request: AnomalyRequest):
+    # Convert Pydantic models to standard dictionaries for the math engine
+    new_exp_dict = request.new_expense.model_dump()
+    history_dicts = [item.model_dump() for item in request.historical_data]
+    
+    # Run the standard deviation math
+    result = analyze_expense_patterns(new_exp_dict, history_dicts)
+    
+    return result
