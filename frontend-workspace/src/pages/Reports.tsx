@@ -34,6 +34,8 @@ import {
   Legend,
 } from 'recharts';
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function trustBand(score?: number): 'High Trust' | 'Moderate' | 'Requires Review' | 'Critical' {
   if (!score) return 'Critical';
   if (score >= 80) return 'High Trust';
@@ -49,10 +51,13 @@ const BAND_COLORS: Record<string, string> = {
   'Critical': '#ef4444',
 };
 
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 export const Reports: React.FC = () => {
   const { claims, userTrustScore } = useClaims();
   const [showAllRows, setShowAllRows] = useState(false);
 
+  // ── Core KPIs ──────────────────────────────────────────────────────────────
   const approvedClaims = claims.filter(
     (c) => c.status !== 'draft' && c.status !== 'rejected'
   );
@@ -68,6 +73,7 @@ export const Reports: React.FC = () => {
   const violationRate =
     claims.length > 0 ? (flaggedCount / claims.length) * 100 : 0;
 
+  // ── AI KPIs ────────────────────────────────────────────────────────────────
   const fastTrackCount = claims.filter((c) => c.isFastTrackEligible).length;
   const fastTrackRate =
     claims.length > 0 ? (fastTrackCount / claims.length) * 100 : 0;
@@ -87,6 +93,7 @@ export const Reports: React.FC = () => {
     (c) => c.bankStatementReconciled === 'Mismatch'
   ).length;
 
+  // ── Trust Score Distribution (band breakdown) ──────────────────────────────
   const bandCounts: Record<string, number> = {
     'High Trust': 0,
     Moderate: 0,
@@ -102,6 +109,7 @@ export const Reports: React.FC = () => {
     color: BAND_COLORS[band],
   }));
 
+  // ── Category Spend ──────────────────────────────────────────────────────────
   const categoryMap: Record<string, number> = {};
   approvedClaims.forEach((c) => {
     const amt = parseFloat(c.totalAmount.replace(/[₹,]/g, '') || '0');
@@ -112,6 +120,7 @@ export const Reports: React.FC = () => {
     amount: categoryMap[key],
   }));
 
+  // ── Expenditure Trend (mock 6-month distribution) ──────────────────────────
   const trendData = [
     { name: 'Jan', amount: Math.round(totalSpend * 0.12) },
     { name: 'Feb', amount: Math.round(totalSpend * 0.18) },
@@ -121,12 +130,14 @@ export const Reports: React.FC = () => {
     { name: 'Jun', amount: Math.round(totalSpend * 0.1) },
   ];
 
+  // ── Routing Breakdown ──────────────────────────────────────────────────────
   const pathData = [
     { name: 'Path A · Fast-Track', value: claims.filter((c) => c.isFastTrackEligible).length, color: '#10b981' },
     { name: 'Path B · Manager', value: claims.filter((c) => !c.isFastTrackEligible && c.riskCategory !== 'high').length, color: '#6366f1' },
     { name: 'Path C · Finance', value: claims.filter((c) => c.riskCategory === 'high').length, color: '#ef4444' },
   ];
 
+  // ── CSV Export ─────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
     const headers = [
       'Claim ID', 'Title', 'Category', 'Amount', 'Status', 'Date',
@@ -172,9 +183,11 @@ export const Reports: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto pb-24">
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-black text-primary tracking-tight uppercase">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
             Spend Analytics &amp; Reports
           </h2>
           <p className="text-slate-500 mt-2 font-medium">
@@ -183,12 +196,14 @@ export const Reports: React.FC = () => {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-2 px-5 py-3 bg-accent text-white rounded-xl text-xs font-black hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-600/10 uppercase tracking-widest cursor-pointer"
+          className="flex items-center gap-2 px-5 py-3 bg-black text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-xl shadow-black/10 uppercase tracking-widest cursor-pointer"
         >
           <Download size={18} />
           Export Full Audit Ledger
         </button>
       </div>
+
+      {/* ── Spend KPI Row ── */}
       <div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <TrendingUp size={12} /> Spend Overview
@@ -225,6 +240,8 @@ export const Reports: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* ── AI Intelligence KPI Row ── */}
       <div>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
           <Brain size={12} /> AI Intelligence Summary
@@ -262,7 +279,9 @@ export const Reports: React.FC = () => {
           />
         </div>
       </div>
-      <div className="bg-primary text-white rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
+
+      {/* ── Trust Score Card ── */}
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-2xl shadow-slate-900/30">
         <div className="flex-1 space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
             <Users size={12} /> Your Current Trust Score
@@ -281,6 +300,7 @@ export const Reports: React.FC = () => {
             Score affects AI routing path, fast-track eligibility, and approval friction.
           </p>
         </div>
+        {/* Score bar */}
         <div className="flex-1 w-full">
           <div className="relative w-full h-5 rounded-full bg-slate-700 overflow-hidden">
             <div
@@ -300,7 +320,11 @@ export const Reports: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Charts Row 1 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* Expenditure Trend */}
         <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -338,6 +362,8 @@ export const Reports: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Category Breakdown */}
         <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -347,7 +373,7 @@ export const Reports: React.FC = () => {
           </div>
           <div className="h-64 w-full">
             {categoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={8} tickLine={false} />
@@ -369,7 +395,11 @@ export const Reports: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Charts Row 2: Trust Distribution + AI Routing ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* Trust Score Distribution */}
         <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -379,7 +409,7 @@ export const Reports: React.FC = () => {
           </div>
           <div className="h-64 w-full">
             {claims.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trustDistData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} />
@@ -398,6 +428,7 @@ export const Reports: React.FC = () => {
               </div>
             )}
           </div>
+          {/* Band legend */}
           <div className="flex flex-wrap gap-3">
             {Object.entries(BAND_COLORS).map(([band, color]) => (
               <div key={band} className="flex items-center gap-1.5">
@@ -407,6 +438,8 @@ export const Reports: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* AI Routing Breakdown Donut */}
         <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -416,7 +449,7 @@ export const Reports: React.FC = () => {
           </div>
           <div className="h-64 w-full">
             {claims.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pathData}
@@ -449,6 +482,8 @@ export const Reports: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Historical Audit Ledger ── */}
       <div className="premium-card overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white">
           <div>
@@ -515,6 +550,7 @@ export const Reports: React.FC = () => {
                       {claim.status}
                     </span>
                   </td>
+                  {/* Trust Score */}
                   <td className="px-4 py-3.5">
                     {claim.trustScore != null ? (
                       <span
@@ -530,6 +566,7 @@ export const Reports: React.FC = () => {
                       <span className="text-[9px] text-slate-400">—</span>
                     )}
                   </td>
+                  {/* Risk */}
                   <td className="px-4 py-3.5">
                     {claim.riskCategory ? (
                       <span
@@ -547,9 +584,11 @@ export const Reports: React.FC = () => {
                       <span className="text-[9px] text-slate-400">—</span>
                     )}
                   </td>
+                  {/* OCR */}
                   <td className="px-4 py-3.5 text-[9px] font-black text-slate-500">
                     {claim.ocrConfidence != null ? `${claim.ocrConfidence}%` : '—'}
                   </td>
+                  {/* Bank Recon */}
                   <td className="px-4 py-3.5">
                     {claim.bankStatementReconciled ? (
                       <span
@@ -567,6 +606,7 @@ export const Reports: React.FC = () => {
                       <span className="text-[9px] text-slate-400">—</span>
                     )}
                   </td>
+                  {/* Tampering */}
                   <td className="px-4 py-3.5">
                     {claim.tamperingDetected ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-700 text-[8px] font-black uppercase animate-pulse">
@@ -588,6 +628,8 @@ export const Reports: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Show More / Less toggle */}
         {claims.length > 10 && (
           <div className="border-t border-slate-100 p-4 flex justify-center bg-white">
             <button
@@ -611,6 +653,8 @@ export const Reports: React.FC = () => {
     </div>
   );
 };
+
+// ─── Sub-component ───────────────────────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
