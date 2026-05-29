@@ -7,6 +7,8 @@ from unittest.mock import patch
 from .models import ExpenseClaim, ExpenseLineItem
 from django.core.files.uploadedfile import SimpleUploadedFile
 import json
+from datetime import timedelta
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -113,6 +115,8 @@ class ExpensePlatformTests(TestCase):
         self.assertEqual(claim.title, "Chennai Client Trip - May")
         self.assertEqual(claim.status, "FAST_TRACK")
         self.assertEqual(claim.total_amount, 460.00)
+        self.assertEqual(claim.adjusted_trust_score, 88)
+        self.assertEqual(claim.recommended_route, "FAST_TRACK")
         
         # Check user trust score updated
         self.user.refresh_from_db()
@@ -136,3 +140,145 @@ class ExpensePlatformTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['title'], "Chennai Client Trip")
+
+    def test_finance_csv_export_access(self):
+        # Authenticated as regular employee (self.user is not staff)
+        url = reverse('finance_csv_export')
+        response = self.client.get(url)
+        # Should be forbidden for non-staff
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Unauthenticated user
+        self.client.force_authenticate(user=None)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_finance_csv_export_data(self):
+        # Create staff user
+        staff_user = User.objects.create_user(
+            username='staffadmin',
+            password='password123',
+            is_staff=True
+        )
+        self.client.force_authenticate(user=staff_user)
+
+        # Create claims with various statuses
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Approved Claim",
+            total_amount=250.00,
+            status="APPROVED",
+            adjusted_trust_score=90,
+            recommended_route="APPROVED"
+        )
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Fast Track Claim",
+            total_amount=150.00,
+            status="FAST_TRACK",
+            adjusted_trust_score=95,
+            recommended_route="FAST_TRACK"
+        )
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Draft Claim",
+            total_amount=500.00,
+            status="DRAFT"
+        )
+
+        url = reverse('finance_csv_export')
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn('attachment', response['Content-Disposition'])
+
+        # Decode CSV content and check lines
+        content = response.content.decode('utf-8')
+        lines = content.strip().split('\r\n')
+        
+        # Header + 2 claims (Approved & Fast Track) = 3 lines total
+        self.assertEqual(len(lines), 3)
+        self.assertIn('Approved Claim', content)
+        self.assertIn('Fast Track Claim', content)
+        self.assertNotIn('Draft Claim', content)
+
+    def test_expense_claim_crud(self):
+        # Create a claim
+        claim = ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Update Test",
+            total_amount=100.00,
+            status="DRAFT"
+        )
+        # 1. Update Claim (PATCH)
+        url = reverse('expense_claim_detail', kwargs={'pk': claim.id})
+        response = self.client.patch(url, {'title': 'Updated Title'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        claim.refresh_from_db()
+        self.assertEqual(claim.title, 'Updated Title')
+
+        # 2. Delete Claim (DELETE)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(ExpenseClaim.objects.filter(id=claim.id).count(), 0)
+
+    def test_expense_history(self):
+        # Create claims with various dates and statuses
+        # Approved Claim within 30 days
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Approved 30 Days",
+            total_amount=100.00,
+            status="APPROVED",
+            created_at=timezone.now() - timedelta(days=5)
+        )
+        # Fast Track Claim within 30 days
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Fast Track 30 Days",
+            total_amount=150.00,
+            status="FAST_TRACK",
+            created_at=timezone.now() - timedelta(days=10)
+        )
+        # Draft Claim within 30 days (should be excluded)
+        ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Draft 30 Days",
+            total_amount=200.00,
+            status="DRAFT",
+            created_at=timezone.now() - timedelta(days=12)
+        )
+        
+        # Approved claim older than 30 days (should be excluded)
+        old_claim = ExpenseClaim.objects.create(
+            employee=self.user,
+            title="Approved Old",
+            total_amount=300.00,
+            status="APPROVED"
+        )
+        # Force created_at to be old (since auto_now_add makes it now)
+        ExpenseClaim.objects.filter(id=old_claim.id).update(created_at=timezone.now() - timedelta(days=35))
+
+        # Test GET direct route
+        url = reverse('expense_claim_history_direct', kwargs={'employee_id': self.user.id})
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Only 2 claims (Approved 30 Days, Fast Track 30 Days) should match
+        self.assertEqual(len(response.data), 2)
+        titles = [c['title'] for c in response.data]
+        self.assertIn("Approved 30 Days", titles)
+        self.assertIn("Fast Track 30 Days", titles)
+        self.assertNotIn("Draft 30 Days", titles)
+        self.assertNotIn("Approved Old", titles)
+
+        # Test permissions: another user cannot view this user's history
+        another_user = User.objects.create_user(
+            username='employee2000',
+            password='password123'
+        )
+        self.client.force_authenticate(user=another_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

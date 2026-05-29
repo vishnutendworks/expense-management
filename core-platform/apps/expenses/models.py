@@ -18,6 +18,8 @@ class ExpenseClaim(models.Model):
     title = models.CharField(max_length=255)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
+    adjusted_trust_score = models.IntegerField(null=True, blank=True)
+    recommended_route = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
