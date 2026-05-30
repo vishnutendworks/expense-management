@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+import httpx
 
 # Import your AI engines
 from app.engines.trust_engine import calculate_trust_score
@@ -57,10 +58,21 @@ class ExpenseRecord(BaseModel):
     amount: float
     category: str
 
-class AnomalyRequest(BaseModel):
+class LiveAnomalyRequest(BaseModel):
+    employee_id: int
     new_expense: ExpenseRecord
-    historical_data: List[ExpenseRecord]
 
+# --- AI FEATURE 4 SCHEMAS ---
+class SmartHintRequest(BaseModel):
+    policy_status: str
+    risk_level: str
+    recent_exceptions_count: int
+
+class SmartHintResponse(BaseModel):
+    policy_summary: str
+    risk_summary: str
+    history_summary: str
+    suggested_action: str
 
 # --- ROUTING ENDPOINT ---
 @app.post("/api/v1/evaluate-claim", response_model=EvaluationResponseSchema)
@@ -120,12 +132,69 @@ async def evaluate_policy_line(expense: ExpenseLine):
 
 # --- AI FEATURE 3: DUPLICATE & ANOMALY GUARD ---
 @app.post("/api/v1/policy/check-anomaly")
-async def check_anomaly(request: AnomalyRequest):
-    # Convert Pydantic models to standard dictionaries for the math engine
-    new_exp_dict = request.new_expense.model_dump()
-    history_dicts = [item.model_dump() for item in request.historical_data]
+async def check_anomaly(request: LiveAnomalyRequest):
+    # 1. Fetch live historical data from Engineer 1's Django API
+    django_url = f"http://localhost:8000/api/expenses/history/{request.employee_id}/"
     
-    # Run the standard deviation math
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(django_url, timeout=5.0)
+            response.raise_for_status()  # Check for 4xx/5xx errors from Django
+            django_claims = response.json()
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Core platform unreachable: {e}")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=response.status_code, detail="Error fetching history from Core")
+
+    # 2. Transform Django's response into the format your math engine expects
+    history_dicts = []
+    for claim in django_claims:
+        history_dicts.append({
+            # Slice the datetime string to just get the YYYY-MM-DD
+            "date": claim.get("created_at", "").split("T")[0], 
+            "merchant": claim.get("title", "Unknown Vendor"),
+            "amount": float(claim.get("total_amount", 0.0)),
+            "category": "General" 
+        })
+
+    # 3. Convert the new incoming expense
+    new_exp_dict = request.new_expense.model_dump()
+    
+    # 4. Run your statistical anomaly math!
     result = analyze_expense_patterns(new_exp_dict, history_dicts)
     
     return result
+
+    # --- AI FEATURE 4: SMART APPROVAL HINTS ---
+@app.post("/api/v1/policy/smart-hint", response_model=SmartHintResponse)
+async def generate_smart_hint(request: SmartHintRequest):
+    # Default assumptions
+    policy_summary = "Compliant"
+    risk_summary = "Normal"
+    history_summary = "No prior policy violations in last 6 months"
+    suggested_action = "Low risk and fully compliant - approval recommended"
+
+    # Evaluate Policy Status
+    if request.policy_status.lower() != "green":
+        policy_summary = "Exception: Claim exceeds standard limits or backdate rules."
+        suggested_action = "Review required - check justification for policy exception."
+
+    # Evaluate Risk Level (Overrides policy suggestion if risk is high)
+    if request.risk_level.lower() == "high":
+        risk_summary = "High Risk: Unusual amount or frequency detected."
+        suggested_action = "High variance detected - review receipts carefully before approving."
+    elif request.risk_level.lower() == "watch":
+        risk_summary = "Watch: Claim pattern deviates slightly from norm."
+
+    # Evaluate History
+    if request.recent_exceptions_count > 0:
+        history_summary = f"{request.recent_exceptions_count} exceptions in recent history."
+        if request.risk_level.lower() == "high":
+            suggested_action = "High risk and frequent past exceptions - strict review advised."
+
+    return SmartHintResponse(
+        policy_summary=policy_summary,
+        risk_summary=risk_summary,
+        history_summary=history_summary,
+        suggested_action=suggested_action
+    )
