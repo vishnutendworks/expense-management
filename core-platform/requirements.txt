@@ -12,3 +12,4 @@ whitenoise==6.6.0
 django-compressor==4.4
 drf-yasg==1.21.7
 setuptools<70.0.0
+django-cors-headers==4.9.0

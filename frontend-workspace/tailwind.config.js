@@ -27,10 +27,14 @@ export default {
           950: '#143484ff',
         }
       },
-      boxShadow: {
-        'premium': '0 10px 40px -10px rgba(30, 58, 95, 0.08), 0 4px 12px -4px rgba(30, 58, 95, 0.04)',
+      borderRadius: {
+        'xl': '1rem',
+        '2xl': '1.5rem',
       }
     },
+    boxShadow: {
+      'premium': '0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 10px -2px rgba(0, 0, 0, 0.02)',
+    }
   },
   plugins: [],
 }
