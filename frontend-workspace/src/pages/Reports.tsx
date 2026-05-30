@@ -183,7 +183,7 @@ export const Reports: React.FC = () => {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-2 px-5 py-3 bg-accent text-white rounded-xl text-xs font-black hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-600/10 uppercase tracking-widest cursor-pointer"
+          className="flex items-center gap-2 px-5 py-3 bg-accent text-[#FAF8F3] rounded-xl text-xs font-black hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-600/10 uppercase tracking-widest cursor-pointer"
         >
           <Download size={18} />
           Export Full Audit Ledger
@@ -262,12 +262,12 @@ export const Reports: React.FC = () => {
           />
         </div>
       </div>
-      <div className="bg-primary text-white rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
+      <div className="bg-primary text-[#FAF8F3] rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
         <div className="flex-1 space-y-2">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
             <Users size={12} /> Your Current Trust Score
           </p>
-          <div className="text-6xl font-black text-white tracking-tight">{userTrustScore}</div>
+          <div className="text-6xl font-black text-[#FAF8F3] tracking-tight">{userTrustScore}</div>
           <div
             className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-1"
             style={{
@@ -301,7 +301,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
+        <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <Calendar size={13} /> Expenditure Trend (6 Months)
@@ -338,7 +338,7 @@ export const Reports: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
+        <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <BarChart3 size={13} /> Spend By Category
@@ -370,7 +370,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
+        <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <Users size={13} /> Trust Score Distribution
@@ -407,7 +407,7 @@ export const Reports: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
+        <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <Zap size={13} /> AI Routing Path Breakdown
@@ -450,7 +450,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
       <div className="premium-card overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-[#FAF8F3]">
           <div>
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
               Historical Expense Ledger
@@ -461,7 +461,7 @@ export const Reports: React.FC = () => {
           </div>
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 text-[10px] font-black text-slate-600 hover:text-black uppercase tracking-wider transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-[10px] font-black text-slate-600 hover:text-slate-900 uppercase tracking-wider transition-colors cursor-pointer"
           >
             <FileSpreadsheet size={14} />
             Export CSV
@@ -485,7 +485,7 @@ export const Reports: React.FC = () => {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
+            <tbody className="divide-y divide-slate-50 bg-[#FAF8F3]">
               {displayedClaims.map((claim) => (
                 <tr
                   key={claim.id}
@@ -589,10 +589,10 @@ export const Reports: React.FC = () => {
           </table>
         </div>
         {claims.length > 10 && (
-          <div className="border-t border-slate-100 p-4 flex justify-center bg-white">
+          <div className="border-t border-slate-100 p-4 flex justify-center bg-[#FAF8F3]">
             <button
               onClick={() => setShowAllRows((v) => !v)}
-              className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 hover:text-black uppercase tracking-widest transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 hover:text-slate-900 uppercase tracking-widest transition-colors cursor-pointer"
             >
               {showAllRows ? (
                 <>
@@ -622,7 +622,7 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, desc, color, icon, pulse }) => (
-  <div className="bg-white p-6 border border-slate-100 rounded-3xl shadow-sm space-y-4">
+  <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-4">
     <div
       className={`w-10 h-10 rounded-xl flex items-center justify-center ${
         color === 'indigo'
