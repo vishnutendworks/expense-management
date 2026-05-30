@@ -17,10 +17,10 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          cd expense-platform/ocr-sidecar
+          cd ocr-sidecar
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run Pytest
         run: |
-          cd expense-platform/ocr-sidecar
-          pytest
+          cd ocr-sidecar
+          pytest -q

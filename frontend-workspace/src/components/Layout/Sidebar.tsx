@@ -97,7 +97,11 @@ const SidebarLink = ({ label, icon: Icon, path }: any) => (
     className={({ isActive }) => `
       w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200
       ${isActive 
+<<<<<<< HEAD
         ? 'bg-[#1E3A5F] text-[#FAF8F3] shadow-lg shadow-[#1E3A5F]/10' 
+=======
+        ? 'bg-black text-white shadow-lg shadow-black/10' 
+>>>>>>> main
         : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}
     `}
   >

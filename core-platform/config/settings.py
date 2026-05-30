@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'microsoft_auth',
     'haystack',
     'drf_yasg',
+    'corsheaders',
     
     # Local apps
     'users',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -211,3 +213,15 @@ MICROSOFT_AUTH_TENANT_ID = os.environ.get('MICROSOFT_AUTH_TENANT_ID', 'common')
 
 # Site ID required by microsoft_auth / django.contrib.sites
 SITE_ID = 1
+
+# CORS Configurations
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",      # React Frontend
+    "http://127.0.0.1:5173",      # Alternate React Frontend
+    "http://localhost:8000",      # Core self
+    "http://localhost:8001",      # OCR local
+    "http://localhost:8002",      # AI local
+    "http://ocr-sidecar:8001",    # OCR Docker alias
+    "http://ai-sidecar:8002",     # AI Docker alias
+]
+CORS_ALLOW_CREDENTIALS = True
