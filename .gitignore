@@ -83,3 +83,7 @@ yarn-error.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# Local development mock bypasses
+ocr-sidecar/fitz.py
+

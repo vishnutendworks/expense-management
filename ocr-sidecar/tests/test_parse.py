@@ -67,3 +67,24 @@ def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_as_float_robust():
+    from app.main import _as_float
+    assert _as_float("12.34.56") == 12.3456
+    assert _as_float("8500..00") == 8500.0
+    assert _as_float("1,234.56") == 1234.56
+    assert _as_float("1.234,56") == 1234.56
+    assert _as_float("123,45") == 123.45
+    assert _as_float("1,234") == 1234.0
+    assert _as_float("(150.00)") == -150.0
+    assert _as_float("150.00-") == -150.0
+    assert _as_float("-150.00") == -150.0
+    assert _as_float("₹8,500.00") == 8500.0
+    assert _as_float("USD 100") == 100.0
+    assert _as_float(None) == 0.0
+    assert _as_float("") == 0.0
+    assert _as_float("abc") == 0.0
+    assert _as_float(123) == 123.0
+    assert _as_float(123.45) == 123.45
+
