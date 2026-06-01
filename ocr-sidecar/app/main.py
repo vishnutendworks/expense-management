@@ -43,10 +43,55 @@ def _strip_code_fences(text: str) -> str:
 def _as_float(v: Any) -> float:
     if isinstance(v, (int, float)):
         return float(v)
+    if v is None:
+        return 0.0
+    
     s = str(v).strip()
-    s = s.replace(",", "")
-    s = re.sub(r"[^\d.\-]", "", s)
-    return float(s) if s not in ("", "-", ".", "-.") else 0.0
+    if not s:
+        return 0.0
+
+    # Capture negative sign from start or end or parentheses
+    is_negative = False
+    if s.startswith('-') or s.endswith('-') or (s.startswith('(') and s.endswith(')')):
+        is_negative = True
+
+    # Strip currency symbols and other characters except digits, dot, comma
+    s = re.sub(r"[^\d.,]", "", s)
+    if not s:
+        return 0.0
+
+    # Resolve comma vs dot
+    # If there are both dots and commas, e.g., "1,234.56" or "1.234,56"
+    if '.' in s and ',' in s:
+        if s.rfind('.') > s.rfind(','):
+            s = s.replace(',', '')
+        else:
+            s = s.replace('.', '').replace(',', '.')
+    elif ',' in s:
+        # Only commas. Let's see: if there's exactly one comma, and it's followed by 2 digits:
+        if s.count(',') == 1:
+            parts = s.split(',')
+            if len(parts[1]) == 2:
+                s = s.replace(',', '.')
+            else:
+                s = s.replace(',', '')
+        else:
+            s = s.replace(',', '')
+
+    # Now s only contains digits and dots.
+    # Handle consecutive dots, e.g., "8500..00" -> "8500.00"
+    s = re.sub(r'\.+', '.', s)
+    # Handle multiple dots: e.g., "12.34.56" -> "12.3456"
+    if s.count('.') > 1:
+        parts = s.split('.')
+        s = parts[0] + '.' + ''.join(parts[1:])
+
+    try:
+        val = float(s)
+        return -val if is_negative else val
+    except ValueError:
+        return 0.0
+
 
 def _as_date_iso(v: Any) -> str:
     s = str(v).strip()

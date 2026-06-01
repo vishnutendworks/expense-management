@@ -186,7 +186,7 @@ export const NewClaim: React.FC = () => {
       // Look for a claim containing an item with matching date and amount
       const matchingClaim = claims.find(c => 
         c.items.some(histItem => 
-          histItem.date === line.date && 
+          histItem.expense_date === line.date && 
           parseFloat(histItem.amount) === parseFloat(line.amount)
         )
       );
@@ -255,7 +255,19 @@ export const NewClaim: React.FC = () => {
       totalAmount: `₹${calculateTotal()}`,
       status: finalStatus,
       date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      items: items.map(item => ({ ...item, id: Math.random(), ocrConfirmed: !!item.ocrConfirmed })),
+      items: items.map(item => ({
+        id: Math.random(),
+        expense_date: item.date,
+        merchant_name: 'Unknown Merchant',
+        category: item.category,
+        amount: item.amount,
+        currency_code: 'INR',
+        payment_mode: 'cash',
+        project_cost_centre: projectCode || 'GEN-CORP',
+        description: item.desc,
+        ocrConfirmed: !!item.ocrConfirmed,
+        ocrValue: item.ocrValue
+      })),
       trustScore: resolvedTrustScore,
       riskCategory: riskCategoryVal,
       receiptUploaded: !!receiptFile,
@@ -305,7 +317,19 @@ export const NewClaim: React.FC = () => {
       totalAmount: `₹${calculateTotal()}`,
       status: 'draft',
       date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      items: items.map(item => ({ ...item, id: Math.random() })),
+      items: items.map(item => ({
+        id: Math.random(),
+        expense_date: item.date,
+        merchant_name: 'Unknown Merchant',
+        category: item.category,
+        amount: item.amount,
+        currency_code: 'INR',
+        payment_mode: 'cash',
+        project_cost_centre: projectCode || 'DRAFT',
+        description: item.desc,
+        ocrConfirmed: !!item.ocrConfirmed,
+        ocrValue: item.ocrValue
+      })),
       receiptUploaded: !!receiptFile,
       bankStatementUploaded: !!bankStatementFile,
       comments: []

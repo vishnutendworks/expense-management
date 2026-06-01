@@ -182,7 +182,7 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setNotifications([]);
   };
 
-  const adjustUserTrustScore = (event: string, detail?: string) => {
+  const adjustUserTrustScore = (event: string, _detail?: string) => {
     let delta = 0;
     switch (event) {
       case 'COMPLIANT_CLAIM_APPROVED':   delta = 2;   break;
