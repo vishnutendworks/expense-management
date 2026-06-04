@@ -11,6 +11,7 @@ import {
 export const Policies: React.FC = () => {
   const { policies, updatePolicy } = useClaims();
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  void editingCategory; // state is set via setEditingCategory in click handlers
   const [editLimit, setEditLimit] = useState<number>(0);
   const [editBackdate, setEditBackdate] = useState<number>(0);
   const [editMandatory, setEditMandatory] = useState<boolean>(false);
@@ -82,6 +83,7 @@ export const Policies: React.FC = () => {
 
                 return (
                   <div key={policy.category} className="p-6 hover:bg-slate-50/20 transition-all">
+                    {isEditing ? (
                       /* EDIT MODE */
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -148,6 +150,7 @@ export const Policies: React.FC = () => {
                           </button>
                         </div>
                       </div>
+                    ) : (
                       /* VIEW MODE */
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="space-y-1">
@@ -168,6 +171,7 @@ export const Policies: React.FC = () => {
                           Configure
                         </button>
                       </div>
+                    )}
                   </div>
                 );
               })}

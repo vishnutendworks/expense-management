@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Plus, Tag, Edit2, Trash2, Globe, CheckCircle2, Clock, Search, 
-  ChevronRight, X, Save, Send, Shield, Users, Briefcase, 
-  AlertTriangle, Paperclip, Settings2, History, GitPullRequest,
-  ArrowRight, Info, Check, Filter, Download, MoreVertical, Copy
+  ChevronRight, X, Save, Send, Shield, Users, 
+  Paperclip, Settings2, GitPullRequest
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClaims, type Category, type GlobalRules } from '../context/ClaimsContext';
+
 
 const BLANK_CATEGORY: Omit<Category, 'id'> = {
   name: '',
@@ -33,9 +33,8 @@ const ATTACH_OPTIONS  = ['receipt', 'invoice', 'travel_authorization', 'manager_
 const CHAIN_OPTIONS   = ['Manager', 'Finance', 'HR', 'Admin', 'CFO'];
 
 export const Categories: React.FC = () => {
-  const { categories, globalRules, workflows, configHistory, addCategory, updateCategory, deleteCategory, publishCategory, updateGlobalRules } = useClaims();
+  const { categories, globalRules, addCategory, updateCategory, deleteCategory, publishCategory, updateGlobalRules } = useClaims();
 
-  const [activeTab, setActiveTab]             = useState<'categories' | 'rules' | 'workflows' | 'history'>('categories');
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [editingCat, setEditingCat]           = useState<Category | null>(null);
   const [publishTarget, setPublishTarget]     = useState<{ id: string; name: string } | null>(null);
@@ -547,21 +546,21 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ initial, onClose, onSave 
                 <FormField label="Allowed Roles">
                   <div className="flex flex-wrap gap-2">
                     {ROLE_OPTIONS.map(role => (
-                      <BadgeToggle key={role} label={role} active={form.allowedRoles.includes(role)} onClick={() => setForm({...form, allowedRoles: toggle(form.allowedRoles, role)})} />
+                      <BadgeToggle key={role} label={role} active={form.allowedRoles?.includes(role) || false} onClick={() => setForm({...form, allowedRoles: toggle(form.allowedRoles || [], role)})} />
                     ))}
                   </div>
                 </FormField>
                 <FormField label="Allowed Departments">
                   <div className="flex flex-wrap gap-2">
                     {DEPT_OPTIONS.map(dept => (
-                      <BadgeToggle key={dept} label={dept} active={form.allowedDepartments.includes(dept)} onClick={() => setForm({...form, allowedDepartments: toggle(form.allowedDepartments, dept)})} />
+                      <BadgeToggle key={dept} label={dept} active={form.allowedDepartments?.includes(dept) || false} onClick={() => setForm({...form, allowedDepartments: toggle(form.allowedDepartments || [], dept)})} />
                     ))}
                   </div>
                 </FormField>
                 <FormField label="Allowed Employment Types">
                   <div className="flex flex-wrap gap-2">
                     {EMPLOYMENT_OPTIONS.map(type => (
-                      <BadgeToggle key={type} label={type} active={form.allowedEmploymentTypes?.includes(type)} onClick={() => setForm({...form, allowedEmploymentTypes: toggle(form.allowedEmploymentTypes || [], type)})} />
+                      <BadgeToggle key={type} label={type} active={form.allowedEmploymentTypes?.includes(type) || false} onClick={() => setForm({...form, allowedEmploymentTypes: toggle(form.allowedEmploymentTypes || [], type)})} />
                     ))}
                   </div>
                 </FormField>

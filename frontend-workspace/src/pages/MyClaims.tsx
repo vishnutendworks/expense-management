@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Search, History, CheckCircle2, Clock, AlertCircle, XCircle,
-  Undo2, FileEdit, Eye, Plus, TrendingUp, DollarSign, Loader2, Ban, Trash2
+  Undo2, FileEdit, Eye, TrendingUp, DollarSign, Loader2, Ban, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClaimDetailDrawer } from '../components/Claims/ClaimDetailDrawer';

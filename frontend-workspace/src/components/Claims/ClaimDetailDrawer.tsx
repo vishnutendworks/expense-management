@@ -383,7 +383,7 @@ const ItemRow = ({ date, category, desc, amount, tax, receiptUrl, bankUrl, recei
       </div>
       <div className="text-right">
         <p className="text-sm font-black text-slate-900">{amount}</p>
-        <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-tight">GST {tax}</p>
+        {tax && <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-tight">GST {tax}</p>}
       </div>
     </div>
 

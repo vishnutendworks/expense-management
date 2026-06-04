@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, ChevronRight, ChevronLeft, Save, X,
   Plus, Trash2, FileText, CheckCircle2, Eye, Paperclip,
-  Loader2, Calendar, IndianRupee, Globe, Briefcase, CreditCard
+  Loader2, Calendar, IndianRupee, Globe, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClaims, type Claim, type ExpenseItem } from '../context/ClaimsContext';
@@ -34,9 +34,8 @@ export const AddExpense: React.FC = () => {
   });
 
   const [mainReceipt, setMainReceipt] = useState<File | null>(null);
-  const [bankStatement, setBankStatement] = useState<File | null>(null);
-  const [bankUrl, setBankUrl] = useState<string | null>(null);
-  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const [bankStatement] = useState<File | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stateDraft = location.state?.draftClaim as Claim | undefined;
@@ -136,14 +135,7 @@ export const AddExpense: React.FC = () => {
     }, 1800);
   };
 
-  const handleBankChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setBankStatement(file);
-      setBankUrl(URL.createObjectURL(file));
-      setClaimData(prev => ({ ...prev, bankStatementUploaded: true }));
-    }
-  };
+
 
   const handleUpdateItem = (id: number, field: keyof ExpenseItem, value: any) => {
     setClaimData(prev => ({

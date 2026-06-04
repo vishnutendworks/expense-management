@@ -43,6 +43,8 @@ export interface Claim {
   tamperingDetected?: boolean;
   bankStatementReconciled?: 'Verified' | 'Unverified' | 'Mismatch';
   anomalyFlagsCount?: number;
+  receipt_url?: string;
+  bank_statement_url?: string;
 }
 
 export interface Policy {
@@ -56,12 +58,12 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
-  allowedRoles: string[];
-  allowedDepartments: string[];
-  allowedEmploymentTypes: string[];
+  allowedRoles?: string[];
+  allowedDepartments?: string[];
+  allowedEmploymentTypes?: string[];
   limits: {
     perTransaction: number;
-    perTransactionUnlimited: boolean;
+    perTransactionUnlimited?: boolean;
     perDay: number;
     perMonth: number;
     perTrip: number;
@@ -193,7 +195,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-002', name: 'Outstation Travel',
     allowedRoles: ['All'], allowedDepartments: ['Sales', 'Operations'],
-    limits: { perTransaction: 15000, perDay: 25000, perMonth: 75000, perTrip: 75000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract'],
+    limits: { perTransaction: 15000, perTransactionUnlimited: false, perDay: 25000, perMonth: 75000, perTrip: 75000 },
     weekendsAllowed: true, holidaysAllowed: true,
     mandatoryAttachments: ['receipt', 'travel_authorization'],
     approvalChain: ['Manager', 'Finance'],
@@ -204,7 +207,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-003', name: 'Meals & Entertainment',
     allowedRoles: ['All'], allowedDepartments: ['All'],
-    limits: { perTransaction: 1500, perDay: 3000, perMonth: 15000, perTrip: 5000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract', 'Intern'],
+    limits: { perTransaction: 1500, perTransactionUnlimited: false, perDay: 3000, perMonth: 15000, perTrip: 5000 },
     weekendsAllowed: true, holidaysAllowed: true,
     mandatoryAttachments: ['receipt'],
     approvalChain: ['Manager'],
@@ -215,7 +219,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-004', name: 'Lodging',
     allowedRoles: ['All'], allowedDepartments: ['All'],
-    limits: { perTransaction: 10000, perDay: 10000, perMonth: 40000, perTrip: 40000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract'],
+    limits: { perTransaction: 10000, perTransactionUnlimited: false, perDay: 10000, perMonth: 40000, perTrip: 40000 },
     weekendsAllowed: true, holidaysAllowed: true,
     mandatoryAttachments: ['receipt', 'invoice'],
     approvalChain: ['Manager', 'Finance'],
@@ -226,7 +231,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-005', name: 'Office Supplies',
     allowedRoles: ['All'], allowedDepartments: ['All'],
-    limits: { perTransaction: 5000, perDay: 10000, perMonth: 20000, perTrip: 20000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract', 'Intern', 'Consultant'],
+    limits: { perTransaction: 5000, perTransactionUnlimited: false, perDay: 10000, perMonth: 20000, perTrip: 20000 },
     weekendsAllowed: false, holidaysAllowed: false,
     mandatoryAttachments: [],
     approvalChain: ['Manager'],
@@ -237,7 +243,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-006', name: 'Fuel',
     allowedRoles: ['Driver', 'Field Executive', 'Manager'], allowedDepartments: ['Operations', 'Sales'],
-    limits: { perTransaction: 3000, perDay: 8000, perMonth: 25000, perTrip: 10000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract'],
+    limits: { perTransaction: 3000, perTransactionUnlimited: false, perDay: 8000, perMonth: 25000, perTrip: 10000 },
     weekendsAllowed: true, holidaysAllowed: false,
     mandatoryAttachments: ['receipt'],
     approvalChain: ['Manager'],
@@ -248,7 +255,8 @@ const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'cat-007', name: 'Internet/Broadband',
     allowedRoles: ['All'], allowedDepartments: ['All'],
-    limits: { perTransaction: 2000, perDay: 2000, perMonth: 4000, perTrip: 4000 },
+    allowedEmploymentTypes: ['Full Time', 'Contract', 'Intern', 'Consultant'],
+    limits: { perTransaction: 2000, perTransactionUnlimited: false, perDay: 2000, perMonth: 4000, perTrip: 4000 },
     weekendsAllowed: true, holidaysAllowed: true,
     mandatoryAttachments: ['invoice'],
     approvalChain: ['Manager'],
