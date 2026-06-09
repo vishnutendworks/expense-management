@@ -125,17 +125,7 @@ export const NewClaim: React.FC = () => {
 
       if (claimType === 'multiline') {
         const filesValid = items.every((item) => item.receiptFile && item.bankFile);
-        return itemsValid && filesValid && claimTitle.trim() !== '' && projectCode.trim() !== '';
-        const perItemFilesValid = items.every((item) => item.receiptFile && item.bankFile);
-        // Multiline requires global overview details AND per-item details
-        return (
-          itemsValid && 
-          perItemFilesValid && 
-          claimTitle.trim() !== '' && 
-          projectCode.trim() !== '' &&
-          receiptFile !== null && 
-          bankStatementFile !== null
-        );
+        return itemsValid && filesValid && claimTitle.trim() !== '';
       }
       return itemsValid;
     }
@@ -618,7 +608,7 @@ export const NewClaim: React.FC = () => {
       }
     }
 
-    if (currentRole && catRule.allowedRoles.length > 0 && !catRule.allowedRoles.includes('All')) {
+    if (currentRole && catRule.allowedRoles && catRule.allowedRoles.length > 0 && !catRule.allowedRoles.includes('All')) {
       const isAllowed = catRule.allowedRoles.some(r => r.toLowerCase() === currentRole.toLowerCase());
       if (!isAllowed) {
         return {
