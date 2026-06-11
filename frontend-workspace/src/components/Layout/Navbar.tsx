@@ -5,7 +5,11 @@ import { useClaims } from '../../context/ClaimsContext';
 export const Navbar: React.FC = () => {
   const { currentRole, setRole, notifications } = useClaims();
   const navigate = useNavigate();
-  const unreadCount = notifications.length;
+  
+  const visibleNotifications = notifications.filter(notif => 
+    !notif.targetRoles || notif.targetRoles.includes(currentRole)
+  );
+  const unreadCount = visibleNotifications.length;
 
   const roleMeta = {
     employee: { name: 'Marcus Richardson', label: 'Employee Submitter', seed: 'Marcus' },

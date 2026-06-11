@@ -10,6 +10,7 @@ import { Reports } from './pages/Reports';
 import { Notifications } from './pages/Notifications';
 import { Categories } from './pages/Categories';
 import { AddExpense } from './pages/AddExpense';
+import { Settings } from './pages/Settings';
 import { ClaimsProvider } from './context/ClaimsContext';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/categories" element={<Categories />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </DashboardLayout>

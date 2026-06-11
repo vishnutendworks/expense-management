@@ -62,6 +62,56 @@ export const ClaimDetailDrawer: React.FC<ClaimDetailDrawerProps> = ({ isOpen, on
     const meta = roleMeta[currentRole] || roleMeta.employee;
     addComment(claim.id, meta.name, meta.label, commentText.trim());
     setCommentText('');
+    alert(`Reply comment successfully posted as ${meta.name} (${meta.label})!`);
+  };
+
+  const downloadCSV = () => {
+    const headers = ['Claim ID', 'Claim Title', 'Category', 'Project Code', 'Date', 'Total Amount', 'Status', 'Risk Category', 'Trust Score'];
+    const row = [
+      claim.id,
+      `"${claim.title.replace(/"/g, '""')}"`,
+      claim.category,
+      claim.projectCode || '',
+      claim.date,
+      `"${claim.totalAmount.replace(/"/g, '""')}"`,
+      claim.status,
+      claim.riskCategory || 'low',
+      claim.trustScore !== undefined ? `${claim.trustScore}%` : 'N/A'
+    ];
+
+    let csvContent = headers.join(',') + '\n';
+    csvContent += row.join(',') + '\n\n';
+
+    // Add Line Items Header
+    const itemHeaders = ['Item ID', 'Date', 'Merchant', 'Category', 'Amount', 'Currency', 'Payment Mode', 'Cost Centre', 'Description', 'OCR Confirmed', 'OCR Value', 'Receipt Attached'];
+    csvContent += itemHeaders.join(',') + '\n';
+
+    claim.items.forEach((item: any, index: number) => {
+      const itemRow = [
+        item.id || index + 1,
+        item.expense_date || '',
+        `"${(item.merchant_name || '').replace(/"/g, '""')}"`,
+        `"${(item.category || '').replace(/"/g, '""')}"`,
+        item.amount,
+        item.currency_code || 'INR',
+        item.payment_mode || 'cash',
+        item.project_cost_centre || '',
+        `"${(item.description || '').replace(/"/g, '""')}"`,
+        item.ocrConfirmed ? 'Yes' : 'No',
+        item.ocrValue || '',
+        item.receipt_file || item.receipt_url ? 'Yes' : 'No'
+      ];
+      csvContent += itemRow.join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${claim.id}_report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleResubmit = () => {
@@ -108,7 +158,11 @@ export const ClaimDetailDrawer: React.FC<ClaimDetailDrawerProps> = ({ isOpen, on
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 shadow-sm">
+                <button 
+                  onClick={downloadCSV}
+                  title="Download CSV Report"
+                  className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 shadow-sm cursor-pointer"
+                >
                   <Download size={18} />
                 </button>
                 {claim.status === 'draft' && (

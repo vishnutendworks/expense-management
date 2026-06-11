@@ -129,6 +129,13 @@ export interface AppNotification {
   type: 'info' | 'warning' | 'success' | 'alert';
   date: string;
   read: boolean;
+  targetRoles?: ('employee' | 'manager' | 'finance' | 'admin')[];
+  roleMessages?: {
+    employee?: { title: string; message: string };
+    manager?: { title: string; message: string };
+    finance?: { title: string; message: string };
+    admin?: { title: string; message: string };
+  };
 }
 
 interface ClaimsContextType {
@@ -155,7 +162,13 @@ interface ClaimsContextType {
   syncBatchToERP: (batchId: string) => Promise<{ success: boolean; docNum: string; payload: any }>;
   markBatchAsDisbursed: (batchId: string) => void;
   updatePolicy: (category: string, updatedFields: Partial<Policy>) => void;
-  addNotification: (title: string, message: string, type: AppNotification['type']) => void;
+  addNotification: (
+    title: string, 
+    message: string, 
+    type: AppNotification['type'],
+    targetRoles?: AppNotification['targetRoles'],
+    roleMessages?: AppNotification['roleMessages']
+  ) => void;
   clearNotifications: () => void;
   adjustUserTrustScore: (event: string, detail?: string) => void;
   resetUserTrustScore: () => void;
@@ -383,14 +396,22 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('tendworks_global_rules', JSON.stringify(globalRules));
   }, [globalRules]);
 
-  const addNotification = (title: string, message: string, type: AppNotification['type']) => {
+  const addNotification = (
+    title: string, 
+    message: string, 
+    type: AppNotification['type'],
+    targetRoles?: AppNotification['targetRoles'],
+    roleMessages?: AppNotification['roleMessages']
+  ) => {
     const newNotif: AppNotification = {
       id: Math.random().toString(),
       title,
       message,
       type,
       date: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      read: false
+      read: false,
+      targetRoles,
+      roleMessages
     };
     setNotifications(prev => [newNotif, ...prev]);
   };
@@ -423,12 +444,46 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const resetUserTrustScore = () => {
     setUserTrustScore(80);
-    addNotification('Trust Score Reset', 'Employee trust score reset to baseline (80%) upon dispute resolution.', 'info');
+    addNotification(
+      'Trust Score Reset',
+      'Employee trust score reset to baseline (80%) upon dispute resolution.',
+      'info',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: { title: 'Trust Score Reset', message: 'Your trust score has been reset to the baseline of 80%.' },
+        manager: { title: 'Trust Score Reset', message: 'Employee trust score reset to baseline (80%).' },
+        finance: { title: 'Trust Score Reset', message: 'Employee trust score reset to baseline (80%) upon dispute resolution.' },
+        admin: { title: 'System: Trust Score Reset', message: 'Trust score baseline reset (80%) for dispute resolution.' }
+      }
+    );
   };
 
   const addClaim = (claim: Claim) => {
     setClaims(prev => [claim, ...prev]);
-    addNotification('New Claim Submitted', `Claim ${claim.id} containing ${claim.items.length} items was submitted.`, 'info');
+    addNotification(
+      'New Claim Submitted',
+      `Claim ${claim.id} containing ${claim.items.length} items was submitted.`,
+      'info',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: {
+          title: 'Claim Submitted Successfully',
+          message: `Your claim ${claim.id} containing ${claim.items.length} items has been submitted for approval.`
+        },
+        manager: {
+          title: 'New Claim Received',
+          message: `You have received a new claim ${claim.id} containing ${claim.items.length} items to check and approve.`
+        },
+        finance: {
+          title: 'New Claim Queued',
+          message: `Claim ${claim.id} containing ${claim.items.length} items has been submitted and is in manager review.`
+        },
+        admin: {
+          title: 'System: Claim Submitted',
+          message: `Claim ${claim.id} containing ${claim.items.length} items was successfully created in the database.`
+        }
+      }
+    );
     if (claim.outsideHours) {
       adjustUserTrustScore('SUBMIT_OUTSIDE_HOURS');
     }
@@ -449,12 +504,39 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateClaim = (claim: Claim) => {
     setClaims(prev => prev.map(c => c.id === claim.id ? claim : c));
-    addNotification('Draft Updated', `Draft ${claim.id} has been updated.`, 'success');
+    addNotification('Draft Updated', `Draft ${claim.id} has been updated.`, 'success', ['employee']);
   };
 
   const updateClaimStatus = (id: string, status: Claim['status']) => {
     setClaims(prev => prev.map(c => c.id === id ? { ...c, status } : c));
-    addNotification('Status Updated', `Claim ${id} status changed to ${status.toUpperCase()}.`, status === 'approved' || status === 'paid' ? 'success' : status === 'flagged' || status === 'rejected' ? 'alert' : 'info');
+    addNotification(
+      'Status Updated',
+      `Claim ${id} status changed to ${status.toUpperCase()}.`,
+      status === 'approved' || status === 'paid' ? 'success' : status === 'flagged' || status === 'rejected' ? 'alert' : 'info',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: {
+          title: `Claim ${status === 'approved' ? 'Approved' : status === 'paid' ? 'Paid' : status === 'rejected' ? 'Rejected' : status === 'sent_back' ? 'Clarification Requested' : 'Status Updated'}`,
+          message: status === 'approved' ? `Your claim ${id} has been approved.` :
+                   status === 'paid' ? `Reimbursement for claim ${id} has been processed.` :
+                   status === 'rejected' ? `Your claim ${id} was rejected by the manager/finance.` :
+                   status === 'sent_back' ? `Your claim ${id} was sent back for clarification.` :
+                   `Your claim ${id} status changed to ${status.toUpperCase()}.`
+        },
+        manager: {
+          title: `Claim ${status.toUpperCase()}`,
+          message: `Claim ${id} status is now ${status.toUpperCase()}.`
+        },
+        finance: {
+          title: `Claim ${status.toUpperCase()}`,
+          message: `Claim ${id} status has been updated to ${status.toUpperCase()}.`
+        },
+        admin: {
+          title: 'System: Status Updated',
+          message: `Claim ${id} status updated to ${status.toUpperCase()}.`
+        }
+      }
+    );
 
     if (status === 'approved' || status === 'paid') {
       const claim = claims.find(c => c.id === id);
@@ -484,12 +566,38 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return c;
     }));
+
+    // Trigger comment notification
+    addNotification(
+      'New Comment Added',
+      `${author} (${role}) added a comment to claim ${claimId}: "${text.substring(0, 30)}..."`,
+      'info',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: {
+          title: 'New Comment / Reply',
+          message: `${author} (${role}) commented on claim ${claimId}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`
+        },
+        manager: {
+          title: 'New Comment / Reply',
+          message: `${author} (${role}) commented on claim ${claimId}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`
+        },
+        finance: {
+          title: 'New Comment / Reply',
+          message: `${author} (${role}) commented on claim ${claimId}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`
+        },
+        admin: {
+          title: 'System: Comment Logged',
+          message: `${author} (${role}) commented on claim ${claimId}.`
+        }
+      }
+    );
   };
 
   const deleteClaim = (id: string) => {
     if (window.confirm('Are you sure you want to delete this claim?')) {
       setClaims(prev => prev.filter(c => c.id !== id));
-      addNotification('Claim Deleted', `Claim ${id} has been removed.`, 'warning');
+      addNotification('Claim Deleted', `Claim ${id} has been removed.`, 'warning', ['employee']);
     }
   };
 
@@ -515,7 +623,18 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return c;
     }));
-    addNotification('Claim Resubmitted', `Claim ${id} has been reinjected into approval cycle.`, 'info');
+    addNotification(
+      'Claim Resubmitted',
+      `Claim ${id} has been reinjected into approval cycle.`,
+      'info',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: { title: 'Claim Resubmitted', message: `Your claim ${id} has been successfully resubmitted.` },
+        manager: { title: 'Claim Resubmitted', message: `Claim ${id} has been resubmitted and is back in your queue.` },
+        finance: { title: 'Claim Resubmitted', message: `Claim ${id} has been resubmitted by the employee.` },
+        admin: { title: 'System: Claim Resubmitted', message: `Claim ${id} has been reinjected into approval cycle.` }
+      }
+    );
   };
 
   const rejectClaimWithReason = (id: string, reason: string, author: string) => {
@@ -544,7 +663,18 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return c;
     }));
     adjustUserTrustScore('REJECT_POLICY_VIOLATION');
-    addNotification('Claim Rejected', `Claim ${id} was rejected. Reason: ${reason}`, 'alert');
+    addNotification(
+      'Claim Rejected',
+      `Claim ${id} was rejected. Reason: ${reason}`,
+      'alert',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: { title: 'Claim Rejected', message: `Your claim ${id} was rejected. Reason: ${reason}` },
+        manager: { title: 'Claim Rejected', message: `You rejected claim ${id}. Reason: ${reason}` },
+        finance: { title: 'Claim Rejected', message: `Claim ${id} was rejected by manager. Reason: ${reason}` },
+        admin: { title: 'System: Claim Rejected', message: `Claim ${id} rejected by ${author}.` }
+      }
+    );
   };
 
   const requestClarification = (id: string, reason: string, author: string) => {
@@ -567,7 +697,18 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       return c;
     }));
-    addNotification('Clarification Requested', `Clarification requested on claim ${id}.`, 'warning');
+    addNotification(
+      'Clarification Requested',
+      `Clarification requested on claim ${id}.`,
+      'warning',
+      ['employee', 'manager', 'finance', 'admin'],
+      {
+        employee: { title: 'Clarification Needed', message: `Clarification requested on your claim ${id}: "${reason.substring(0, 50)}${reason.length > 50 ? '...' : ''}"` },
+        manager: { title: 'Clarification Requested', message: `You requested clarification on claim ${id}.` },
+        finance: { title: 'Clarification Requested', message: `Claim ${id} was sent back to employee for clarification.` },
+        admin: { title: 'System: Clarification Requested', message: `Clarification requested on claim ${id} by ${author}.` }
+      }
+    );
   };
 
   const createPayoutBatch = (claimIds: string[]) => {

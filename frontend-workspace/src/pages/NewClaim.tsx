@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   UserCheck,
   FileCheck,
-  Loader2
+  Loader2,
+  BarChart3
 } from 'lucide-react'; 
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -94,6 +95,27 @@ export const NewClaim: React.FC = () => {
   const [ocrTamperingDetected, setOcrTamperingDetected] = useState<boolean>(false);
   const [outsideBusinessHours, setOutsideBusinessHours] = useState<boolean>(false);
   const [ocrData, setOcrData] = useState<any>(null);
+
+  const hasUploadedBankStatement = bankStatementFile !== null || (claimType === 'multiline' && items.some(item => !!item.bankFile));
+
+  const getCategoryBreakdown = () => {
+    const breakdown: Record<string, { total: number; currency: string }> = {};
+    items.forEach(item => {
+      const cat = item.category || 'Uncategorized';
+      const amt = parseFloat(item.amount || '0') + parseFloat(item.tax || '0');
+      const cur = item.currency || 'INR';
+      
+      const key = `${cat}_${cur}`;
+      if (!breakdown[key]) {
+        breakdown[key] = { total: 0, currency: cur };
+      }
+      breakdown[key].total += amt;
+    });
+    return Object.entries(breakdown).map(([key, data]) => {
+      const cat = key.substring(0, key.lastIndexOf('_'));
+      return { category: cat, total: data.total, currency: data.currency };
+    });
+  };
 
   const [duplicateWarning, setDuplicateWarning] = useState<{
     show: boolean;
@@ -477,14 +499,14 @@ export const NewClaim: React.FC = () => {
       riskCategory: riskCategoryVal,
       receiptUploaded: !!receiptFile,
       receipt_url: receiptUrl || undefined,
-      bankStatementUploaded: !!bankStatementFile,
+      bankStatementUploaded: hasUploadedBankStatement,
       bank_statement_url: bankUrl || undefined,
       hasBankStatementMismatch: reconciliationMismatch,
       outsideHours: outsideBusinessHours,
       isFastTrackEligible: calculatedPath === 'pathA',
       ocrConfidence: receiptFile ? 0.94 : undefined,
       tamperingDetected: ocrTamperingDetected,
-      bankStatementReconciled: !bankStatementFile ? 'Unverified' : (reconciliationMismatch ? 'Mismatch' : 'Verified'),
+      bankStatementReconciled: !hasUploadedBankStatement ? 'Unverified' : (reconciliationMismatch ? 'Mismatch' : 'Verified'),
       anomalyFlagsCount: (calculatedPath === 'pathC' ? 1 : 0) + (reconciliationMismatch ? 1 : 0) + (ocrTamperingDetected ? 1 : 0),
       flaggedReasons: calculatedPath === 'pathC'
         ? [
@@ -542,7 +564,7 @@ export const NewClaim: React.FC = () => {
       })),
       receiptUploaded: items.some(item => !!item.receiptFile),
       receipt_url: receiptUrl || undefined,
-      bankStatementUploaded: !!bankStatementFile,
+      bankStatementUploaded: hasUploadedBankStatement,
       bank_statement_url: bankUrl || undefined,
       comments: []
     };
@@ -1543,6 +1565,28 @@ export const NewClaim: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Category Breakdown list for multiline */}
+        {claimType === 'multiline' && items.length > 0 && (
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <BarChart3 size={14} />
+              Category Breakdown Summary
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {getCategoryBreakdown().map((breakItem, idx) => {
+                const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ' };
+                const sym = CURRENCY_SYMBOLS[breakItem.currency] ?? breakItem.currency;
+                return (
+                  <div key={idx} className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-inner">
+                    <span className="text-xs font-bold text-slate-700">{breakItem.category}</span>
+                    <span className="text-xs font-black text-slate-900">{sym}{breakItem.total.toLocaleString('en-IN')}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -1607,7 +1651,7 @@ export const NewClaim: React.FC = () => {
       </div>
 
       {/* Reconciliation mismatch trigger */}
-      {bankStatementFile && (
+      {hasUploadedBankStatement && (
         <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
           <div>
             <p className="text-xs font-bold text-slate-850">Reconciliation Discrepancy</p>
@@ -1668,8 +1712,8 @@ export const NewClaim: React.FC = () => {
           />
           <LiveCheck
             label="Statement Reconciliation"
-            status={!bankStatementFile ? 'skipped' : reconciliationMismatch ? 'warning' : 'pass'}
-            desc={!bankStatementFile ? 'No statement loaded' : reconciliationMismatch ? 'Discrepancy: bank ledger amount mismatch' : '100% exact ledger value match found'}
+            status={!hasUploadedBankStatement ? 'skipped' : reconciliationMismatch ? 'warning' : 'pass'}
+            desc={!hasUploadedBankStatement ? 'No statement loaded' : reconciliationMismatch ? 'Discrepancy: bank ledger amount mismatch' : '100% exact ledger value match found'}
           />
           <LiveCheck
             label="Employee Trust Indicator"

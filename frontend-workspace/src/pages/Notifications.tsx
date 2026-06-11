@@ -11,7 +11,18 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Notifications: React.FC = () => {
-  const { notifications, clearNotifications } = useClaims();
+  const { notifications, currentRole, clearNotifications } = useClaims();
+
+  const visibleNotifications = notifications.filter(notif => 
+    !notif.targetRoles || notif.targetRoles.includes(currentRole)
+  );
+
+  const getDisplayContent = (notif: any) => {
+    if (notif.roleMessages && notif.roleMessages[currentRole]) {
+      return notif.roleMessages[currentRole];
+    }
+    return { title: notif.title, message: notif.message };
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -48,7 +59,7 @@ export const Notifications: React.FC = () => {
           <p className="text-slate-500 mt-2 font-medium">Timeline history of auto-approvals, audit flags, and ERP handshakes</p>
         </div>
         
-        {notifications.length > 0 && (
+        {visibleNotifications.length > 0 && (
           <button
             onClick={clearNotifications}
             className="flex items-center gap-2 px-5 py-3 text-slate-600 bg-white border border-slate-200 rounded-xl text-xs font-black hover:text-black hover:border-black transition-all uppercase tracking-widest cursor-pointer"
@@ -65,38 +76,41 @@ export const Notifications: React.FC = () => {
             Event Inbox
           </h3>
           <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-widest border border-slate-200">
-            {notifications.length} Unread
+            {visibleNotifications.length} Unread
           </span>
         </div>
 
         <div className="divide-y divide-slate-55 bg-white">
           <AnimatePresence initial={false}>
-            {notifications.length > 0 ? (
-              notifications.map((notif) => (
-                <motion.div 
-                  key={notif.id}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`p-6 border-l-4 flex gap-4 transition-all ${getBgColor(notif.type)} ${
-                    notif.type === 'success' ? 'border-l-emerald-500' :
-                    notif.type === 'alert' ? 'border-l-rose-500' :
-                    notif.type === 'warning' ? 'border-l-amber-500' : 'border-l-blue-500'
-                  }`}
-                >
-                  <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100/50 shrink-0 self-start">
-                    {getIcon(notif.type)}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-slate-900">{notif.title}</h4>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{notif.date}</span>
+            {visibleNotifications.length > 0 ? (
+              visibleNotifications.map((notif) => {
+                const display = getDisplayContent(notif);
+                return (
+                  <motion.div 
+                    key={notif.id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`p-6 border-l-4 flex gap-4 transition-all ${getBgColor(notif.type)} ${
+                      notif.type === 'success' ? 'border-l-emerald-500' :
+                      notif.type === 'alert' ? 'border-l-rose-500' :
+                      notif.type === 'warning' ? 'border-l-amber-500' : 'border-l-blue-500'
+                    }`}
+                  >
+                    <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-100/50 shrink-0 self-start">
+                      {getIcon(notif.type)}
                     </div>
-                    <p className="text-xs text-slate-550 leading-relaxed font-semibold">{notif.message}</p>
-                  </div>
-                </motion.div>
-              ))
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-slate-900">{display.title}</h4>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{notif.date}</span>
+                      </div>
+                      <p className="text-xs text-slate-550 leading-relaxed font-semibold">{display.message}</p>
+                    </div>
+                  </motion.div>
+                );
+              })
             ) : (
               <div className="p-24 text-center space-y-4">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200 shadow-inner">

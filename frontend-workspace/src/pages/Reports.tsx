@@ -50,7 +50,7 @@ const BAND_COLORS: Record<string, string> = {
 };
 
 export const Reports: React.FC = () => {
-  const { claims, userTrustScore } = useClaims();
+  const { claims, userTrustScore, currentRole } = useClaims();
   const [showAllRows, setShowAllRows] = useState(false);
 
   const approvedClaims = claims.filter(
@@ -260,44 +260,46 @@ export const Reports: React.FC = () => {
           />
         </div>
       </div>
-      <div className="bg-primary text-[#FAF8F3] rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
-        <div className="flex-1 space-y-2">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-            <Users size={12} /> Your Current Trust Score
-          </p>
-          <div className="text-6xl font-black text-[#FAF8F3] tracking-tight">{userTrustScore}</div>
-          <div
-            className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-1"
-            style={{
-              background: BAND_COLORS[trustBand(userTrustScore)] + '33',
-              color: BAND_COLORS[trustBand(userTrustScore)],
-            }}
-          >
-            {trustBand(userTrustScore)}
-          </div>
-          <p className="text-slate-500 text-xs font-medium mt-2">
-            Score affects AI routing path, fast-track eligibility, and approval friction.
-          </p>
-        </div>
-        <div className="flex-1 w-full">
-          <div className="relative w-full h-5 rounded-full bg-slate-700 overflow-hidden">
+      {currentRole !== 'finance' && currentRole !== 'admin' && (
+        <div className="bg-primary text-[#FAF8F3] rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
+          <div className="flex-1 space-y-2">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+              <Users size={12} /> Your Current Trust Score
+            </p>
+            <div className="text-6xl font-black text-[#FAF8F3] tracking-tight">{userTrustScore}</div>
             <div
-              className="h-full rounded-full transition-all duration-700"
+              className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-1"
               style={{
-                width: `${Math.max(userTrustScore, 2)}%`,
-                background: `linear-gradient(90deg, ${BAND_COLORS['Critical']}, ${BAND_COLORS['Requires Review']}, ${BAND_COLORS['Moderate']}, ${BAND_COLORS['High Trust']})`,
+                background: BAND_COLORS[trustBand(userTrustScore)] + '33',
+                color: BAND_COLORS[trustBand(userTrustScore)],
               }}
-            />
+            >
+              {trustBand(userTrustScore)}
+            </div>
+            <p className="text-slate-500 text-xs font-medium mt-2">
+              Score affects AI routing path, fast-track eligibility, and approval friction.
+            </p>
           </div>
-          <div className="flex justify-between mt-1.5 text-[9px] font-black text-slate-500 uppercase">
-            <span>0 · Critical</span>
-            <span>40 · Review</span>
-            <span>60 · Moderate</span>
-            <span>80 · High</span>
-            <span>100</span>
+          <div className="flex-1 w-full">
+            <div className="relative w-full h-5 rounded-full bg-slate-700 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${Math.max(userTrustScore, 2)}%`,
+                  background: `linear-gradient(90deg, ${BAND_COLORS['Critical']}, ${BAND_COLORS['Requires Review']}, ${BAND_COLORS['Moderate']}, ${BAND_COLORS['High Trust']})`,
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5 text-[9px] font-black text-slate-500 uppercase">
+              <span>0 · Critical</span>
+              <span>40 · Review</span>
+              <span>60 · Moderate</span>
+              <span>80 · High</span>
+              <span>100</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       <div className="bg-[#FAF8F3] p-6 border border-slate-100 rounded-3xl shadow-sm space-y-5">
         <div>
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -342,7 +344,7 @@ export const Reports: React.FC = () => {
           </h3>
           <p className="text-[10px] uppercase font-bold text-slate-400 mt-1">Approved spend allocation</p>
         </div>
-        <div className="w-full min-h-[300px]">
+        <div className="w-full h-[300px]">
           {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={categoryData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
@@ -373,7 +375,7 @@ export const Reports: React.FC = () => {
             </h3>
             <p className="text-[10px] uppercase font-bold text-slate-400 mt-1">Band breakdown across all claims</p>
           </div>
-          <div className="w-full min-h-[300px]">
+          <div className="w-full h-[300px]">
             {claims.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={trustDistData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -410,7 +412,7 @@ export const Reports: React.FC = () => {
             </h3>
             <p className="text-[10px] uppercase font-bold text-slate-400 mt-1">Fast-Track vs Manager vs Finance</p>
           </div>
-          <div className="w-full min-h-[300px]">
+          <div className="w-full h-[300px]">
             {claims.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>

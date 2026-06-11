@@ -25,6 +25,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Try to find and load .env file from current or parent directories
+def _load_dotenv():
+    curr = os.path.abspath(os.path.dirname(__file__))
+    for _ in range(4):
+        candidate = os.path.join(curr, ".env")
+        if os.path.isfile(candidate):
+            try:
+                with open(candidate, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip("'\"")
+                            if k:
+                                os.environ[k] = v
+                print(f"[OCR] Environment variables loaded from {candidate}")
+                break
+            except Exception as e:
+                print(f"[OCR] Error loading .env from {candidate}: {e}")
+        curr = os.path.dirname(curr)
+
+_load_dotenv()
+
 # --- Fix 2: Startup API key check ---
 _startup_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
 if _startup_api_key:

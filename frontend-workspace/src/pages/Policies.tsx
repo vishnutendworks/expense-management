@@ -43,15 +43,17 @@ export const Policies: React.FC = () => {
 
     // Apply scaling to the policies in context
     policies.forEach(p => {
-      // Travel scale
-      let newLimit = p.limit;
-      if (p.category === 'Travel Expenses') newLimit = Math.round(50000 * scalar);
-      else if (p.category === 'Meal and Entertainment') newLimit = Math.round(1500 * scalar);
-      else if (p.category === 'Internet/Broadband Allowances') newLimit = Math.round(3000 * scalar);
-      else if (p.category === 'Children Education Allowances') newLimit = Math.round(5000 * scalar);
-      else if (p.category === 'Mileage Allowance') newLimit = Math.round(10000 * scalar);
-      else if (p.category === 'Others') newLimit = Math.round(2000 * scalar);
+      let baseLimit = 2000; // default fallback
+      if (p.category === 'Local Travel') baseLimit = 50000;
+      else if (p.category === 'Meals & Entertainment') baseLimit = 1500;
+      else if (p.category === 'Flights') baseLimit = 75000;
+      else if (p.category === 'Lodging') baseLimit = 10000;
+      else if (p.category === 'Office Supplies') baseLimit = 5000;
+      else if (p.category === 'Fuel') baseLimit = 8000;
+      else if (p.category === 'Other') baseLimit = 2000;
+      else if (p.category === 'Internet/Broadband') baseLimit = 1500;
 
+      const newLimit = Math.round(baseLimit * scalar);
       updatePolicy(p.category, { limit: newLimit });
     });
   };

@@ -199,108 +199,111 @@ export const Categories: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ delay: i * 0.05 }}
+              className="flex animate-in fade-in"
             >
-              {/* Card Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#1E3A5F]/10 rounded-xl flex items-center justify-center">
-                    <Tag size={18} className="text-[#1E3A5F]" />
+              <div className="premium-card p-6 bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-md hover:border-slate-350 transition-all group flex flex-col justify-between w-full space-y-4">
+                {/* Card Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#1E3A5F]/10 rounded-xl flex items-center justify-center">
+                      <Tag size={18} className="text-[#1E3A5F]" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">{cat.name}</h4>
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                        cat.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {cat.status}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-black text-slate-900 text-sm">{cat.name}</h4>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                      cat.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {cat.status}
-                    </span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(cat)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-[#1E3A5F] transition-all cursor-pointer">
+                      <Edit2 size={15} />
+                    </button>
+                    <button onClick={() => deleteCategory(cat.id)} className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition-all cursor-pointer">
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(cat)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-[#1E3A5F] transition-all">
-                    <Edit2 size={15} />
-                  </button>
-                  <button onClick={() => deleteCategory(cat.id)} className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition-all">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] premium-card p-6 space-y-4 group">
-                {[
-                  ['Per Transaction', cat.limits.perTransaction],
-                  ['Per Day',         cat.limits.perDay],
-                  ['Per Month',       cat.limits.perMonth],
-                  ['Per Trip',        cat.limits.perTrip],
-                ].map(([label, val]) => (
-                  <div key={String(label)} className="bg-slate-50 rounded-lg px-3 py-2">
-                    <p className="text-slate-400 font-black text-[9px] uppercase tracking-wider">{label}</p>
-                    <p className="font-black text-slate-900 mt-0.5">₹{Number(val).toLocaleString('en-IN')}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mr-1">Std Approval:</span>
-                  <div className="flex flex-wrap gap-1 items-center">
-                    {cat.approvalChain.map((a, idx) => (
-                      <React.Fragment key={a}>
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-blue-100">
-                          {a}
-                        </span>
-                        {idx < cat.approvalChain.length - 1 && <ChevronRight size={10} className="text-slate-300" />}
-                      </React.Fragment>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                  {[
+                    ['Per Transaction', cat.limits.perTransaction],
+                    ['Per Day',         cat.limits.perDay],
+                    ['Per Month',       cat.limits.perMonth],
+                    ['Per Trip',        cat.limits.perTrip],
+                  ].map(([label, val]) => (
+                    <div key={String(label)} className="bg-white rounded-xl px-3 py-2 border border-slate-250/30">
+                      <p className="text-slate-400 font-black text-[9px] uppercase tracking-wider">{label}</p>
+                      <p className="font-black text-slate-900 mt-0.5">₹{Number(val).toLocaleString('en-IN')}</p>
+                    </div>
+                  ))}
                 </div>
-                {cat.approvalChainHighValue && cat.approvalChainHighValue.length > 0 && (
+
+                <div className="space-y-2">
                   <div className="flex items-start gap-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mr-1">Escalated:</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mr-1">Std Approval:</span>
                     <div className="flex flex-wrap gap-1 items-center">
-                      {cat.approvalChainHighValue.map((a, idx) => (
+                      {cat.approvalChain.map((a, idx) => (
                         <React.Fragment key={a}>
-                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-indigo-100">
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-blue-100">
                             {a}
                           </span>
-                          {idx < cat.approvalChainHighValue.length - 1 && <ChevronRight size={10} className="text-slate-300" />}
+                          {idx < cat.approvalChain.length - 1 && <ChevronRight size={10} className="text-slate-300" />}
                         </React.Fragment>
                       ))}
                     </div>
                   </div>
-                )}
-                {cat.mandatoryAttachments.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {cat.mandatoryAttachments.map(a => (
-                      <span key={a} className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-purple-100 flex items-center gap-1">
-                        <Paperclip size={9} /> {a.replace('_', ' ')}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[10px] text-slate-400 font-semibold">
-                  <span className={cat.weekendsAllowed ? 'text-emerald-600' : 'text-slate-300'}>
-                    ✓ Weekends
-                  </span>
-                  <span className={cat.holidaysAllowed ? 'text-emerald-600' : 'text-slate-300'}>
-                    ✓ Holidays
-                  </span>
+                  {cat.approvalChainHighValue && cat.approvalChainHighValue.length > 0 && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider mr-1">Escalated:</span>
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {cat.approvalChainHighValue.map((a, idx) => (
+                          <React.Fragment key={a}>
+                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-indigo-100">
+                              {a}
+                            </span>
+                            {idx < cat.approvalChainHighValue.length - 1 && <ChevronRight size={10} className="text-slate-300" />}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {cat.mandatoryAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {cat.mandatoryAttachments.map(a => (
+                        <span key={a} className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[9px] font-black uppercase tracking-wider rounded-full border border-purple-100 flex items-center gap-1">
+                          <Paperclip size={9} /> {a.replace('_', ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {cat.status === 'draft' ? (
-                  <button
-                    onClick={() => setPublishTarget({ id: cat.id, name: cat.name })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E3A5F] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-                  >
-                    <Send size={11} /> Publish
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-1 text-[9px] text-emerald-600 font-black">
-                    <CheckCircle2 size={12} />
-                    Effective {cat.effectiveDate}
+                
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-3 text-[10px] text-slate-400 font-semibold">
+                    <span className={cat.weekendsAllowed ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+                      ✓ Weekends
+                    </span>
+                    <span className={cat.holidaysAllowed ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+                      ✓ Holidays
+                    </span>
                   </div>
-                )}
+                  {cat.status === 'draft' ? (
+                    <button
+                      onClick={() => setPublishTarget({ id: cat.id, name: cat.name })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E3A5F] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all cursor-pointer"
+                    >
+                      <Send size={11} /> Publish
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1 text-[9px] text-emerald-600 font-black">
+                      <CheckCircle2 size={12} />
+                      Effective {cat.effectiveDate}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}
