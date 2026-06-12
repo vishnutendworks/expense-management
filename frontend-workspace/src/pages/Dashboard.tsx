@@ -150,6 +150,7 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
+        {(currentRole === 'employee' || currentRole === 'manager') && (
         <div className="bg-primary text-[#FAF8F3] p-6 rounded-3xl shadow-premium flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             <h4 className="text-xs font-black uppercase tracking-widest text-yellow-400 flex items-center gap-1.5">
@@ -187,6 +188,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
       </div>
 

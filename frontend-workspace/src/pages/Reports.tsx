@@ -260,7 +260,7 @@ export const Reports: React.FC = () => {
           />
         </div>
       </div>
-      {currentRole !== 'finance' && currentRole !== 'admin' && (
+      {(currentRole === 'employee' || currentRole === 'manager') && (
         <div className="bg-primary text-[#FAF8F3] rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-premium">
           <div className="flex-1 space-y-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">

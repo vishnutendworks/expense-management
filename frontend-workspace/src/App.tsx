@@ -13,6 +13,7 @@ import { AddExpense } from './pages/AddExpense';
 import { Settings } from './pages/Settings';
 import { ClaimsProvider } from './context/ClaimsContext';
 
+
 function App() {
   return (
     <ClaimsProvider>

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Cpu,
+  Download,
   Check,
   Send,
   XCircle
@@ -104,6 +105,32 @@ export const Finance: React.FC = () => {
       alert('Sync failed.');
       setSyncStatus('idle');
     }
+  };
+
+  // Step 2: Generate export file (CSV) for manual Accounting Team import
+  const handleDownloadGLExport = (batch: PayoutBatch) => {
+    const batchClaims = claims.filter(c => batch.claimIds.includes(c.id));
+    
+    const headers = ["GL_Account", "Cost_Center", "Employee", "Amount", "Currency", "Description", "Reference_ID"];
+    const rows = batchClaims.map(c => [
+      "610200_EXPENSE", // Static GL Mapping
+      c.projectCode || "GENERAL_CORP",
+      "Marcus Richardson",
+      c.totalAmount.replace(/[₹,]/g, ''),
+      "INR",
+      c.title,
+      c.id
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `GL_EXPORT_${batch.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleForceApproveFlagged = (e: React.MouseEvent, id: string) => {
@@ -413,6 +440,14 @@ export const Finance: React.FC = () => {
                 <p className="text-base font-black text-slate-900">{batch.amount}</p>
                 
                 {batch.status === 'Pending Sync' && (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleDownloadGLExport(batch)}
+                      className="p-2 text-slate-400 hover:text-black hover:bg-slate-100 rounded-xl transition-all"
+                      title="Download GL Export File"
+                    >
+                      <Download size={16} />
+                    </button>
                   <button 
                     onClick={() => handleSyncClick(batch)}
                     className="flex items-center gap-1 bg-black text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-slate-800 transition-all cursor-pointer"
@@ -420,6 +455,7 @@ export const Finance: React.FC = () => {
                     <RefreshCw size={10} className="animate-spin-slow" />
                     Sync to ERP
                   </button>
+                  </div>
                 )}
 
                 {batch.status === 'Synced' && (
@@ -466,16 +502,17 @@ export const Finance: React.FC = () => {
                 <div className="bg-slate-900 text-slate-300 p-4 rounded-2xl text-[10px] font-mono leading-relaxed overflow-x-auto shadow-inner border border-slate-800">
                   <pre>{JSON.stringify({
                     webhook_endpoint: "https://api.erp.tendworks.com/v1/journal-entries",
-                    batchId: syncingBatch.id,
-                    totalValue: syncingBatch.amount,
-                    currency: "INR",
-                    compiledDate: new Date().toISOString(),
+                    header: {
+                      batchId: syncingBatch.id,
+                      totalValue: syncingBatch.amount,
+                      currency: "INR",
+                      compiledDate: new Date().toISOString(),
+                    },
                     entries: claims
                       .filter(c => syncingBatch.claimIds.includes(c.id))
                       .map(c => ({
-                        claimId: c.id,
-                        title: c.title,
-                        debit: parseFloat(c.totalAmount.replace(/[₹,]/g, '')),
+                        gl_account: "610200_GEN_EXP",
+                        debit_amount: parseFloat(c.totalAmount.replace(/[₹,]/g, '')),
                         costCenter: c.projectCode || 'CC-GENERAL'
                       }))
                   }, null, 2)}</pre>
