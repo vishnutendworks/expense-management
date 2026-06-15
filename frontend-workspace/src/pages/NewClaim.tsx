@@ -217,6 +217,11 @@ export const NewClaim: React.FC = () => {
         method: 'POST',
         body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error(`OCR Server responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
       console.log('[OCR] Response:', data); 
 
@@ -281,6 +286,11 @@ export const NewClaim: React.FC = () => {
         method: 'POST',
         body: formData,
       });
+
+      if (!response.ok) {
+        throw new Error(`OCR Line Item Server responded with status: ${response.status}`);
+      }
+
       const data = await response.json(); 
       console.log(`[OCR line ${idx}] Response:`, data);
 
@@ -335,6 +345,11 @@ export const NewClaim: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (!response.ok) {
+        throw new Error(`AI Sidecar responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
       setLivePolicyResult(data);
     } catch (e) {

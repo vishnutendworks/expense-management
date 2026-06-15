@@ -363,8 +363,7 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const saved = localStorage.getItem('tendworks_batches');
       return saved ? JSON.parse(saved) : [
-        { id: 'BCH-2024-07', date: '10 Oct, 2024', amount: '₹2,45,600', count: 12, status: 'Paid', claimIds: [] },
-        { id: 'BCH-2024-06', date: '25 Sep, 2024', amount: '₹1,89,200', count: 8, status: 'Paid', claimIds: [] }
+        // Default batches can be added here if needed for initial state
       ];
     } catch {
       return [];
