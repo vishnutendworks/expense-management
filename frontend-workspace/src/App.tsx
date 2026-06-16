@@ -5,6 +5,7 @@ import { NewClaim } from './pages/NewClaim';
 import { MyClaims } from './pages/MyClaims';
 import { Approvals } from './pages/Approvals';
 import { Finance } from './pages/Finance';
+import { ErpSync } from './pages/ErpSync';
 import { Policies } from './pages/Policies';
 import { Reports } from './pages/Reports';
 import { Notifications } from './pages/Notifications';
@@ -12,6 +13,7 @@ import { Categories } from './pages/Categories';
 import { AddExpense } from './pages/AddExpense';
 import { Settings } from './pages/Settings';
 import { ClaimsProvider } from './context/ClaimsContext';
+
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
             <Route path="/my-claims" element={<MyClaims />} />
             <Route path="/approvals" element={<Approvals />} />
             <Route path="/reimbursements" element={<Finance />} />
+            <Route path="/reimbursements/erpsync" element={<ErpSync />} />
             <Route path="/policies" element={<Policies />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/reports" element={<Reports />} />

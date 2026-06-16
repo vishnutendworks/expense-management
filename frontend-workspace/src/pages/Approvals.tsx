@@ -113,6 +113,7 @@ export const Approvals: React.FC = () => {
         rejectClaimWithReason(actionModal.claimId, actionModal.reasonText, 'Sarah Chen');
       } else if (actionModal.type === 'clarify') {
         requestClarification(actionModal.claimId, actionModal.reasonText, 'Sarah Chen');
+        alert(`Clarification requested for ${actionModal.claimId}. The employee has been notified: "Action Required: Your manager has requested more information on your claim."`);
       }
     } else if (actionModal.type === 'bulk_reject') {
       selectedIds.forEach(id => {
