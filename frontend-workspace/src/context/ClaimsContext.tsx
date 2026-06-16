@@ -127,6 +127,7 @@ export interface AppNotification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'alert';
+  targetRole?: 'employee' | 'manager' | 'finance' | 'admin' | 'all';
   date: string;
   read: boolean;
   targetRoles?: ('employee' | 'manager' | 'finance' | 'admin')[];
@@ -166,7 +167,7 @@ interface ClaimsContextType {
     title: string, 
     message: string, 
     type: AppNotification['type'],
-    targetRoles?: AppNotification['targetRoles'],
+    targetRoles?: AppNotification['targetRoles'] | AppNotification['targetRole'],
     roleMessages?: AppNotification['roleMessages']
   ) => void;
   clearNotifications: () => void;
@@ -362,8 +363,7 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const saved = localStorage.getItem('tendworks_batches');
       return saved ? JSON.parse(saved) : [
-        { id: 'BCH-2024-07', date: '10 Oct, 2024', amount: '₹2,45,600', count: 12, status: 'Paid', claimIds: [] },
-        { id: 'BCH-2024-06', date: '25 Sep, 2024', amount: '₹1,89,200', count: 8, status: 'Paid', claimIds: [] }
+        // Default batches can be added here if needed for initial state
       ];
     } catch {
       return [];
@@ -400,14 +400,33 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     title: string, 
     message: string, 
     type: AppNotification['type'],
-    targetRoles?: AppNotification['targetRoles'],
+    targetRolesOrRole?: AppNotification['targetRoles'] | AppNotification['targetRole'],
     roleMessages?: AppNotification['roleMessages']
   ) => {
+    let targetRole: AppNotification['targetRole'] = 'all';
+    let targetRoles: AppNotification['targetRoles'] = undefined;
+
+    if (Array.isArray(targetRolesOrRole)) {
+      targetRoles = targetRolesOrRole;
+      if (targetRolesOrRole.length === 1) {
+        targetRole = targetRolesOrRole[0];
+      } else {
+        targetRole = 'all';
+      }
+    } else if (typeof targetRolesOrRole === 'string') {
+      targetRole = targetRolesOrRole;
+      if (targetRolesOrRole === 'all') {
+        targetRoles = ['employee', 'manager', 'finance', 'admin'];
+      } else {
+        targetRoles = [targetRolesOrRole];
+      }
+    }
     const newNotif: AppNotification = {
       id: Math.random().toString(),
       title,
       message,
       type,
+      targetRole,
       date: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       read: false,
       targetRoles,
@@ -472,7 +491,7 @@ export const ClaimsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         },
         manager: {
           title: 'New Claim Received',
-          message: `You have received a new claim ${claim.id} containing ${claim.items.length} items to check and approve.`
+          message: `A new claim (${claim.id}) from Marcus Richardson is awaiting your approval.`
         },
         finance: {
           title: 'New Claim Queued',

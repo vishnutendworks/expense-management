@@ -12,6 +12,7 @@ import {
   Paperclip,
   AlertTriangle,
   Receipt,
+  Calendar,
   Zap,
   Activity,
   ShieldCheck,
@@ -91,7 +92,7 @@ export const NewClaim: React.FC = () => {
   const [bankStatementFile, setBankStatementFile] = useState<string | null>(null);
   const [bankUrl, setBankUrl] = useState<string | null>(null);
   const [aiOcrStatus, setAiOcrStatus] = useState<'idle' | 'processing' | 'ready' | 'autofilled' | 'error'>('idle');
-  const [ocrErrorMessage, setOcrErrorMessage] = useState<string | null>(null);
+  const [ocrErrorMessage, setOcrErrorMessage] = useState<string>('');
   const [reconciliationMismatch, setReconciliationMismatch] = useState<boolean>(false);
   const [userGradeTrust, setUserGradeTrust] = useState<'high' | 'normal' | 'low'>('normal');
   const [ocrTamperingDetected, setOcrTamperingDetected] = useState<boolean>(false);
@@ -150,6 +151,11 @@ export const NewClaim: React.FC = () => {
       );
 
       if (claimType === 'multiline') {
+        const start = new Date(tripStartDate);
+        const end = new Date(tripEndDate);
+        const diff = (end.getTime() - start.getTime()) / (1000 * 3600 * 24);
+        const dateValid = !!(tripStartDate && tripEndDate && diff >= 0 && diff <= 30);
+
         const filesValid = items.every((item) => item.receiptFile && item.bankFile);
         return itemsValid && filesValid && claimTitle.trim() !== '';
       }
@@ -208,7 +214,6 @@ export const NewClaim: React.FC = () => {
 
   const triggerAiParsing = async (file: File) => {
     setAiOcrStatus('processing');
-    setOcrErrorMessage(null);
     const formData = new FormData();
     formData.append('file', file);
 
@@ -217,9 +222,14 @@ export const NewClaim: React.FC = () => {
         method: 'POST',
         body: formData,
       });
+
+      if (!response.ok) {
+        throw new Error(`OCR Server responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (response.ok && data.status === 'success' && data.extracted_data) {
+      if (data.status === 'success' && data.extracted_data) {
         const extracted = data.extracted_data;
         setOcrData(extracted);
         setAiOcrStatus('autofilled');
@@ -235,6 +245,9 @@ export const NewClaim: React.FC = () => {
         const taxAmount = (extracted.tax_amount ?? extracted.tax ?? '0').toString();
         // Extracted other_charges from backend response
         const otherCharges = (extracted.other_charges ?? '0').toString();
+
+        // Calculate total amount for OCR validation
+        const totalAmount = (parseFloat(amountBeforeTax) + parseFloat(taxAmount) + parseFloat(otherCharges)).toString();
 
         const category = extracted.category || 'Local Travel';
         const currency = extracted.currency_code || 'INR';
@@ -259,11 +272,11 @@ export const NewClaim: React.FC = () => {
             billable: false,
             currency: currency,
             paymentMode: 'Personal Card',
-            projectCode: invoiceId,
+            projectCode: '',
             merchantName: merchant,
             receiptFile: file.name,
             receiptUrl: URL.createObjectURL(file),
-            ocrValue: amountBeforeTax,
+            ocrValue: totalAmount,
             ocrConfirmed: true
           }
         ]);
@@ -278,7 +291,7 @@ export const NewClaim: React.FC = () => {
   };
 
   const triggerLineItemOcr = async (file: File, idx: number) => {
-    setItems(prev => prev.map((item, i) => i === idx ? { ...item, ocrStatus: 'processing', ocrError: undefined, receiptFile: file.name } : item));
+    setItems(prev => prev.map((item, i) => i === idx ? { ...item, ocrStatus: 'processing', receiptFile: file.name } : item));
 
     const formData = new FormData();
     formData.append('file', file);
@@ -290,7 +303,7 @@ export const NewClaim: React.FC = () => {
       });
       const data = await response.json();
 
-      if (response.ok && data.status === 'success' && data.extracted_data) {
+      if (data.status === 'success' && data.extracted_data) {
         const extracted = data.extracted_data;
         const merchant = extracted.merchant_name || 'Unknown Merchant';
         const expenseDate = extracted.expense_date || new Date().toISOString().split('T')[0];
@@ -351,6 +364,11 @@ export const NewClaim: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (!response.ok) {
+        throw new Error(`AI Sidecar responded with status: ${response.status}`);
+      }
+
       const data = await response.json();
       setLivePolicyResult(data);
     } catch (e) {
@@ -946,7 +964,7 @@ export const NewClaim: React.FC = () => {
                                 }}
                                 className="flex items-center gap-1.5 text-[10px] font-black text-rose-500 uppercase hover:underline cursor-pointer ml-1"
                               >
-                                <Trash2 size={12} /> Remove
+                                Remove File
                               </button>
                             </div>
                           </div>
@@ -1001,66 +1019,66 @@ export const NewClaim: React.FC = () => {
                                 }}
                                 className="flex items-center gap-1.5 text-[10px] font-black text-rose-500 uppercase hover:underline cursor-pointer ml-1"
                               >
-                                <Trash2 size={12} /> Remove
+                                Remove File
                               </button>
                             </div>
                           </div>
                         )}
                       </div>
-                    </div>
 
-                    {aiOcrStatus !== 'idle' && (
-                      <div className="p-5 bg-primary text-[#FAF8F3] rounded-2xl space-y-3 shadow-xl">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-yellow-400">
-                            <Zap size={14} className="animate-pulse" />
-                            AI OCR Smart Auto-Fill
-                          </p>
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${aiOcrStatus === 'processing' ? 'bg-amber-500/20 text-amber-300 animate-pulse' :
-                            aiOcrStatus === 'error' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
-                            }`}>
-                            {aiOcrStatus === 'processing' ? 'Analyzing file...' :
-                              aiOcrStatus === 'error' ? 'Analysis Failed' : 'Analysis Ready'}
-                          </span>
-                        </div>
-
-                        {aiOcrStatus === 'processing' && (
-                          <div className="space-y-2">
-                            <p className="text-[11px] text-slate-400 font-medium">Reading merchant name, date, total amount, taxes, fees, and transaction details...</p>
-                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                              <motion.div
-                                className="bg-[#FAF8F3] h-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: '100%' }}
-                                transition={{ duration: 1.5 }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {aiOcrStatus === 'error' && (
-                          <div className="text-[11px] text-rose-300 font-semibold space-y-1">
-                            <p>⚠️ Failed to auto-fill details from receipt:</p>
-                            <p className="bg-black/20 p-2.5 rounded-xl border border-rose-500/30 text-rose-200 break-words font-mono text-[10px]">
-                              {ocrErrorMessage}
-                            </p>
-                          </div>
-                        )}
-
-                        {aiOcrStatus !== 'processing' && aiOcrStatus !== 'error' && (
+                      {aiOcrStatus !== 'idle' && (
+                        <div className="p-5 bg-primary text-[#FAF8F3] rounded-2xl space-y-3 shadow-xl col-span-2">
                           <div className="flex items-center justify-between">
-                            <div className="text-[11px] text-slate-350 space-y-0.5 font-semibold">
-                              <p>📌 <span className="font-black text-[#FAF8F3]">Merchant:</span> {ocrData ? ocrData.merchant_name : 'Indigo Cabs / Airlines'}</p>
-                              <p>💰 <span className="font-black text-[#FAF8F3]">Scanned Total:</span> {(() => { const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ' }; const sym = ocrData ? (CURRENCY_SYMBOLS[ocrData.currency_code || 'INR'] ?? ocrData.currency_code) : '₹'; return `${sym}${ocrData ? (parseFloat(ocrData.amount_before_tax || '0') + parseFloat(ocrData.other_charges || '0') + parseFloat(ocrData.tax_amount || '0')).toLocaleString('en-IN') : '8,500.00'}`; })()}</p>
-                              <p>📅 <span className="font-black text-[#FAF8F3]">Scanned Date:</span> {ocrData ? ocrData.expense_date : '2024-10-18'}</p>
-                            </div>
+                            <p className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-yellow-400">
+                              <Zap size={14} className="animate-pulse" />
+                              AI OCR Smart Auto-Fill
+                            </p>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${aiOcrStatus === 'processing' ? 'bg-amber-500/20 text-amber-300 animate-pulse' :
+                              aiOcrStatus === 'error' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                              }`}>
+                              {aiOcrStatus === 'processing' ? 'Analyzing file...' :
+                                aiOcrStatus === 'error' ? 'Analysis Failed' : 'Analysis Ready'}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    )}
+
+                          {aiOcrStatus === 'processing' && (
+                            <div className="space-y-2">
+                              <p className="text-[11px] text-slate-400 font-medium">Reading merchant name, date, total amount, taxes, fees, and transaction details...</p>
+                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <motion.div
+                                  className="bg-[#FAF8F3] h-full"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: '100%' }}
+                                  transition={{ duration: 1.5 }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {aiOcrStatus === 'error' && (
+                            <div className="text-[11px] text-rose-300 font-semibold space-y-1">
+                              <p>⚠️ Failed to auto-fill details from receipt:</p>
+                              <p className="bg-black/20 p-2.5 rounded-xl border border-rose-500/30 text-rose-200 break-words font-mono text-[10px]">
+                                {ocrErrorMessage}
+                              </p>
+                            </div>
+                          )}
+
+                          {aiOcrStatus !== 'processing' && aiOcrStatus !== 'error' && (
+                            <div className="flex items-center justify-between">
+                              <div className="text-[11px] text-slate-350 space-y-0.5 font-semibold">
+                                <p>📌 <span className="font-black text-[#FAF8F3]">Merchant:</span> {ocrData ? ocrData.merchant_name : 'Indigo Cabs / Airlines'}</p>
+                                <p>💰 <span className="font-black text-[#FAF8F3]">Scanned Total:</span> {(() => { const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ' }; const sym = ocrData ? (CURRENCY_SYMBOLS[ocrData.currency_code || 'INR'] ?? ocrData.currency_code) : '₹'; return `${sym}${ocrData ? (parseFloat(ocrData.amount_before_tax || '0') + parseFloat(ocrData.other_charges || '0') + parseFloat(ocrData.tax_amount || '0')).toLocaleString('en-IN') : '8,500.00'}`; })()}</p>
+                                <p>📅 <span className="font-black text-[#FAF8F3]">Scanned Date:</span> {ocrData ? ocrData.expense_date : '2024-10-18'}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div >
-              </motion.div >
+                </div>
+              </motion.div>
             )}
 
             {/* STEP 2: Line Items */}
@@ -1593,7 +1611,7 @@ export const NewClaim: React.FC = () => {
           </AnimatePresence >
 
           {/* Form Actions */}
-          < div className="flex items-center justify-between pt-6 border-t border-slate-100" >
+          <div className="flex items-center justify-between pt-6 border-t border-slate-100" >
             <button
               onClick={prevStep}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${(currentStep === 'details' && claimType !== 'multiline') ? 'text-slate-350 cursor-not-allowed' : 'text-slate-650 hover:bg-slate-100'
@@ -1623,7 +1641,7 @@ export const NewClaim: React.FC = () => {
         </div >
 
         {/* Side Panel: Dynamic Engine parameters controls & Live audit validation */}
-        < div className="space-y-6" >
+        <div className="space-y-6">
           <div className="bg-[#FAF8F3] p-6 border border-slate-200 rounded-3xl shadow-sm space-y-6">
             <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 pb-3 border-b border-slate-100">
               <Zap size={14} className="text-yellow-500 animate-bounce" />
@@ -1710,8 +1728,8 @@ export const NewClaim: React.FC = () => {
                 />
                 <LiveCheck
                   label="Statement Reconciliation"
-                  status={!hasUploadedBankStatement ? 'skipped' : reconciliationMismatch ? 'warning' : 'pass'}
-                  desc={!hasUploadedBankStatement ? 'No statement loaded' : reconciliationMismatch ? 'Discrepancy: bank ledger amount mismatch' : '100% exact ledger value match found'}
+                  status={(claimType === 'single' ? !bankStatementFile : !items.some(i => !!i.bankFile)) ? 'skipped' : reconciliationMismatch ? 'warning' : 'pass'}
+                  desc={(claimType === 'single' ? !bankStatementFile : !items.some(i => !!i.bankFile)) ? 'No statement loaded' : reconciliationMismatch ? 'Discrepancy: bank ledger amount mismatch' : '100% exact ledger value match found'}
                 />
                 <LiveCheck
                   label="Employee Trust Indicator"
@@ -1726,186 +1744,186 @@ export const NewClaim: React.FC = () => {
               </div>
             </div>
           </div>
-        </div >
+        </div>
+      </div>
 
-        {/* AI Trust & Anomaly Routing Engine Modal */}
-        <AnimatePresence>
-          {
-            isSubmitting && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md"
-              >
-                <div className="bg-[#FAF8F3] rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-slate-100 space-y-6">
-                  <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                    <div className="p-2.5 bg-[#1E3A5F] text-[#FAF8F3] rounded-xl">
-                      <Activity size={18} className="animate-pulse" />
-                    </div>
-                    <div>
-                      <h3 className="text-md font-black text-slate-900 uppercase tracking-wider">AI Trust & Anomaly Routing Engine</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">Executing 4 Automated Pipeline Checks</p>
-                    </div>
+      {/* AI Trust & Anomaly Routing Engine Modal */}
+      <AnimatePresence>
+        {
+          isSubmitting && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md"
+            >
+              <div className="bg-[#FAF8F3] rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-slate-100 space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                  <div className="p-2.5 bg-[#1E3A5F] text-[#FAF8F3] rounded-xl">
+                    <Activity size={18} className="animate-pulse" />
                   </div>
-
-                  <div className="space-y-4">
-                    <RoutingPipelineStep
-                      title="1. Spending Policy Validation"
-                      active={routingStep === 1}
-                      completed={routingStep > 1}
-                      icon={ShieldCheck}
-                    />
-                    <RoutingPipelineStep
-                      title="2. Anomaly & Duplicate Detection"
-                      active={routingStep === 2}
-                      completed={routingStep > 2}
-                      icon={AlertTriangle}
-                    />
-                    <RoutingPipelineStep
-                      title="3. Mathematical Statement Reconciliation"
-                      active={routingStep === 3}
-                      completed={routingStep > 3}
-                      icon={FileCheck}
-                    />
-                    <RoutingPipelineStep
-                      title="4. Submitter Trust Index Calculation"
-                      active={routingStep === 4}
-                      completed={routingStep > 4}
-                      icon={UserCheck}
-                    />
+                  <div>
+                    <h3 className="text-md font-black text-slate-900 uppercase tracking-wider">AI Trust & Anomaly Routing Engine</h3>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase">Executing 4 Automated Pipeline Checks</p>
                   </div>
-
-                  {routingStep === 4 && (
-                    <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl animate-in fade-in zoom-in duration-300">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Routing Outcome</p>
-                      {routingPathResult === 'pathA' && (
-                        <div className="mt-2 text-xs text-emerald-850 font-bold space-y-1">
-                          <p className="text-emerald-700 font-black">🚀 PATH A: AUTO-APPROVAL TRIPPED</p>
-                          <p className="text-[11px] text-slate-500 font-medium">Claim meets high-trust threshold & low-value policy guidelines. Bypassing manager review entirely; moving direct to Finance disbursement.</p>
-                        </div>
-                      )}
-                      {routingPathResult === 'pathB' && (
-                        <div className="mt-2 text-xs text-blue-850 font-bold space-y-1">
-                          <p className="text-blue-700 font-black">📨 PATH B: ROUTED FOR MANAGER AUDIT</p>
-                          <p className="text-[11px] text-slate-500 font-medium">Standard validation score. Claim successfully routed to assigned manager Sarah Chen for manual review.</p>
-                        </div>
-                      )}
-                      {routingPathResult === 'pathC' && (
-                        <div className="mt-2 text-xs text-rose-850 font-bold space-y-1">
-                          <p className="text-rose-700 font-black">🚨 PATH C: CRITICAL ANOMALY ESCALATION</p>
-                          <p className="text-[11px] text-slate-500 font-medium">Critical anomaly flagged or low trust rating. Bypassing line manager and escalating claim straight to Admin Fraud Queue.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
-              </motion.div>
-            )
-          }
-        </AnimatePresence >
 
-        {/* Duplicate and Anomaly Warning Popup */}
-        <AnimatePresence>
-          {
-            duplicateWarning && duplicateWarning.show && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-                <div className="bg-[#FAF8F3] rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-100 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-                      <AlertTriangle size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900 uppercase">Duplicate Alert Guard</h3>
-                      <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
-                        A similar expense of <span className="font-bold text-slate-800">₹{parseFloat(duplicateWarning.amount || '0').toLocaleString('en-IN')}</span> on <span className="font-bold text-slate-800">{duplicateWarning.date}</span> matches an existing claim (<span className="font-bold text-slate-800">{duplicateWarning.duplicateClaimId}</span>).
-                      </p>
-                    </div>
+                <div className="space-y-4">
+                  <RoutingPipelineStep
+                    title="1. Spending Policy Validation"
+                    active={routingStep === 1}
+                    completed={routingStep > 1}
+                    icon={ShieldCheck}
+                  />
+                  <RoutingPipelineStep
+                    title="2. Anomaly & Duplicate Detection"
+                    active={routingStep === 2}
+                    completed={routingStep > 2}
+                    icon={AlertTriangle}
+                  />
+                  <RoutingPipelineStep
+                    title="3. Mathematical Statement Reconciliation"
+                    active={routingStep === 3}
+                    completed={routingStep > 3}
+                    icon={FileCheck}
+                  />
+                  <RoutingPipelineStep
+                    title="4. Submitter Trust Index Calculation"
+                    active={routingStep === 4}
+                    completed={routingStep > 4}
+                    icon={UserCheck}
+                  />
+                </div>
+
+                {routingStep === 4 && (
+                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl animate-in fade-in zoom-in duration-300">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Routing Outcome</p>
+                    {routingPathResult === 'pathA' && (
+                      <div className="mt-2 text-xs text-emerald-850 font-bold space-y-1">
+                        <p className="text-emerald-700 font-black">🚀 PATH A: AUTO-APPROVAL TRIPPED</p>
+                        <p className="text-[11px] text-slate-500 font-medium">Claim meets high-trust threshold & low-value policy guidelines. Bypassing manager review entirely; moving direct to Finance disbursement.</p>
+                      </div>
+                    )}
+                    {routingPathResult === 'pathB' && (
+                      <div className="mt-2 text-xs text-blue-850 font-bold space-y-1">
+                        <p className="text-blue-700 font-black">📨 PATH B: ROUTED FOR MANAGER AUDIT</p>
+                        <p className="text-[11px] text-slate-500 font-medium">Standard validation score. Claim successfully routed to assigned manager Sarah Chen for manual review.</p>
+                      </div>
+                    )}
+                    {routingPathResult === 'pathC' && (
+                      <div className="mt-2 text-xs text-rose-850 font-bold space-y-1">
+                        <p className="text-rose-700 font-black">🚨 PATH C: CRITICAL ANOMALY ESCALATION</p>
+                        <p className="text-[11px] text-slate-500 font-medium">Critical anomaly flagged or low trust rating. Bypassing line manager and escalating claim straight to Admin Fraud Queue.</p>
+                      </div>
+                    )}
                   </div>
+                )}
+              </div>
+            </motion.div>
+          )
+        }
+      </AnimatePresence >
 
-                  <div className="p-3.5 bg-rose-50/50 border border-rose-100 rounded-2xl text-[11px] text-rose-900 leading-relaxed font-semibold">
+      {/* Duplicate and Anomaly Warning Popup */}
+      <AnimatePresence>
+        {
+          duplicateWarning && duplicateWarning.show && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+              <div className="bg-[#FAF8F3] rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-100 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                    <AlertTriangle size={24} />
                   </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 uppercase">Duplicate Alert Guard</h3>
+                    <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                      A similar expense of <span className="font-bold text-slate-800">₹{parseFloat(duplicateWarning.amount || '0').toLocaleString('en-IN')}</span> on <span className="font-bold text-slate-800">{duplicateWarning.date}</span> matches an existing claim (<span className="font-bold text-slate-800">{duplicateWarning.duplicateClaimId}</span>).
+                    </p>
+                  </div>
+                </div>
 
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      onClick={() => {
-                        if (duplicateWarning.itemIndex !== undefined) {
-                          const newItems = [...items];
-                          if (newItems.length === 0) {
-                            newItems.push({
-                              id: Date.now(),
-                              date: '',
-                              category: categories[0]?.name || 'Local Travel',
-                              amount: '',
-                              tax: '',
-                              otherCharges: '',
-                              desc: '',
-                              billable: false,
-                              currency: 'INR',
-                              paymentMode: 'Personal Card',
-                              projectCode: '',
-                              merchantName: '',
-                            });
-                          }
-                          setItems(newItems);
+                <div className="p-3.5 bg-rose-50/50 border border-rose-100 rounded-2xl text-[11px] text-rose-900 leading-relaxed font-semibold">
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      if (duplicateWarning.itemIndex !== undefined) {
+                        const newItems = [...items];
+                        if (newItems.length === 0) {
+                          newItems.push({
+                            id: Date.now(),
+                            date: '',
+                            category: categories[0]?.name || 'Local Travel',
+                            amount: '',
+                            tax: '',
+                            otherCharges: '',
+                            desc: '',
+                            billable: false,
+                            currency: 'INR',
+                            paymentMode: 'Personal Card',
+                            projectCode: '',
+                            merchantName: '',
+                          });
                         }
-                        setDuplicateWarning(null);
-                      }}
-                      className="flex-1 py-3 bg-rose-600 text-[#FAF8F3] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-colors"
-                    >
-                      [ Remove Line ]
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDuplicateWarning(null);
-                        setTimeout(() => {
-                          handleFinalSubmit();
-                        }, 100);
-                      }}
-                      className="flex-1 py-3 bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors"
-                    >
-                      Separate Claim
-                    </button>
-                  </div>
+                        setItems(newItems);
+                      }
+                      setDuplicateWarning(null);
+                    }}
+                    className="flex-1 py-3 bg-rose-600 text-[#FAF8F3] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-colors"
+                  >
+                    [ Remove Line ]
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDuplicateWarning(null);
+                      setTimeout(() => {
+                        handleFinalSubmit();
+                      }, 100);
+                    }}
+                    className="flex-1 py-3 bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors"
+                  >
+                    Separate Claim
+                  </button>
                 </div>
               </div>
-            )
-          }
-        </AnimatePresence >
+            </div>
+          )
+        }
+      </AnimatePresence >
 
-        {/* Success Modal */}
-        <AnimatePresence>
-          {
-            isSuccess && (
+      {/* Success Modal */}
+      <AnimatePresence>
+        {
+          isSuccess && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-[#FAF8F3]/95 backdrop-blur-sm"
+            >
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#FAF8F3]/95 backdrop-blur-sm"
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="text-center space-y-4"
               >
-                <motion.div
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  className="text-center space-y-4"
-                >
-                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md">
-                    <CheckCircle2 size={40} />
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Claim Routed Successfully</h3>
-                  <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium">
-                    The routing engine has successfully processed the pipeline checks. Redirecting to Claims dashboard...
-                  </p>
-                  <div className="pt-4 flex justify-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                  </div>
-                </motion.div>
+                <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md">
+                  <CheckCircle2 size={40} />
+                </div>
+                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Claim Routed Successfully</h3>
+                <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium">
+                  The routing engine has successfully processed the pipeline checks. Redirecting to Claims dashboard...
+                </p>
+                <div className="pt-4 flex justify-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                </div>
               </motion.div>
-            )
-          }
-        </AnimatePresence >
-      </div >
-    </div >
+            </motion.div>
+          )
+        }
+      </AnimatePresence >
+    </div>
   );
 };
 
@@ -1914,7 +1932,6 @@ export const NewClaim: React.FC = () => {
 const StepItem = ({ active, done, num, label }: { active: boolean, done?: boolean, num: number, label: string }) => (
   <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${active ? 'bg-[#FAF8F3] shadow-md' : ''}`}>
     <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${done ? 'bg-accent text-[#FAF8F3]' : active ? 'bg-accent text-[#FAF8F3]' : 'bg-slate-200 text-slate-500'
-
       }`}>
       {done ? <CheckCircle2 size={14} /> : num}
     </div>
