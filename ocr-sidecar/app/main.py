@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
-import fitz  # PyMuPDF — real library, not stub
+import fitz
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -25,7 +25,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Try to find and load .env file from current or parent directories
 def _load_dotenv():
     curr = os.path.abspath(os.path.dirname(__file__))
     for _ in range(4):
@@ -51,13 +50,11 @@ def _load_dotenv():
 
 _load_dotenv()
 
-# --- Fix 2: Startup API key check ---
 _startup_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
 if _startup_api_key:
     print(f"[OCR] API key loaded: OK (key starts with {_startup_api_key[:6]}...)")
 else:
     print("[OCR] WARNING: API key is missing or empty")
-
 
 @app.get("/health")
 def health():
@@ -66,10 +63,9 @@ def health():
 class OCRResponseData(BaseModel):
     merchant_name: str
     expense_date: str
-    # Fix 3: amount_before_tax is the pre-tax subtotal; tax_amount is the tax only.
-    # The frontend computes the grand total as amount_before_tax + tax_amount.
     amount_before_tax: float
-    tax_amount: float = Field(0.0, description="Tax amount if present, else 0.0")
+    tax_amount: float = Field(0.0)
+    other_charges: float = Field(0.0)
     currency_code: str
     ocr_confidence: float
     tampering_detected: bool
@@ -125,7 +121,6 @@ def _as_float(v: Any) -> float:
     except ValueError:
         return 0.0
 
-
 def _as_date_iso(v: Any) -> str:
     s = str(v).strip()
     for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%d %b %Y", "%d %B %Y"):
@@ -139,7 +134,6 @@ def _detect_mime(upload: UploadFile) -> str:
     return (upload.content_type or "").lower()
 
 def _render_pdf_to_png_bytes(pdf_bytes: bytes) -> bytes:
-    """Render ALL pages of a PDF stitched vertically into one PNG for Gemini."""
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     if doc.page_count < 1:
         raise ValueError("PDF has no pages")
@@ -153,7 +147,6 @@ def _render_pdf_to_png_bytes(pdf_bytes: bytes) -> bytes:
     if len(pixmaps) == 1:
         return pixmaps[0].tobytes("png")
 
-    # Stitch all pages vertically
     total_height = sum(p.height for p in pixmaps)
     max_width = max(p.width for p in pixmaps)
     combined = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, max_width, total_height))
@@ -165,10 +158,10 @@ def _render_pdf_to_png_bytes(pdf_bytes: bytes) -> bytes:
 
     return combined.tobytes("png")
 
-
 def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, Any]:
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     is_dummy_key = not api_key or "your_gemini" in api_key or api_key == "placeholder"
+    
     if is_dummy_key:
         print("WARNING: GEMINI_API_KEY/GOOGLE_API_KEY not found in environment or is a placeholder. Falling back to local mock OCR extraction.")
         if len(image_bytes) == 246315:
@@ -178,9 +171,9 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
                 "expense_date": "2022-05-01",
                 "invoice_id": "EMP-123456",
                 "category": None,
-                # Fix 3: amount_before_tax = subtotal before tax
                 "amount_before_tax": 425.50,
                 "tax_amount": 0.0,
+                "other_charges": 0.0,
                 "currency_code": "USD",
                 "ocr_confidence": 0.96,
                 "tampering_detected": False,
@@ -190,9 +183,9 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
             "expense_date": "2026-06-04",
             "invoice_id": "INV-1042-88",
             "category": "Local Travel",
-            # Fix 3: 460.00 total = 438.10 subtotal + 21.90 tax
             "amount_before_tax": 438.10,
             "tax_amount": 21.90,
+            "other_charges": 0.0,
             "currency_code": "INR",
             "ocr_confidence": 0.95,
             "tampering_detected": False,
@@ -216,17 +209,19 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
         '  "end_date": "YYYY-MM-DD or null — trip/service end date if present",\n'
         '  "invoice_id": "bill/invoice/receipt number or null",\n'
         '  "category": "one of the allowed values below",\n'
-        '  "amount_before_tax": <the subtotal BEFORE tax — do NOT include tax in this value>,\n'
+        '  "amount_before_tax": <the subtotal BEFORE tax — do NOT include tax or extra fees in this value>,\n'
         '  "tax_amount": <total of ALL tax lines: CGST+SGST or IGST or VAT or Service Tax; 0 if none>,\n'
+        '  "total_receipt_amount": <the EXACT final grand total printed on the receipt>,\n'
         '  "currency": "3-letter currency code detected from the receipt, e.g. INR, USD, EUR, GBP",\n'
         '  "ocr_confidence": <0.0 to 1.0>,\n'
         '  "tampering_detected": false\n'
         "}\n\n"
         "CRITICAL AMOUNT RULE:\n"
-        "Do NOT return the grand total amount. Instead:\n"
-        "  - amount_before_tax = the subtotal BEFORE tax (pre-tax net amount)\n"
+        "Do NOT return the grand total amount as the amount_before_tax. Instead:\n"
+        "  - amount_before_tax = the subtotal BEFORE tax and fees (pre-tax net amount)\n"
         "  - tax_amount = the tax value separately (CGST + SGST, or IGST, or VAT, etc.)\n"
-        "  - The caller will compute grand total as amount_before_tax + tax_amount\n\n"
+        "  - total_receipt_amount = the EXACT final grand total printed on the receipt\n"
+        "  - Do NOT calculate anything yourself. Just extract the printed numbers.\n\n"
         "ALLOWED CATEGORY VALUES — choose EXACTLY one:\n"
         "  \"Meals & Entertainment\"  — for: restaurant, cafe, food, dining, swiggy, zomato, bar, bakery, hotel food\n"
         "  \"Local Travel\"           — for: ola, uber, rapido, taxi, auto, metro, local bus, city cab\n"
@@ -238,12 +233,13 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
         "EXTRACTION INSTRUCTIONS:\n"
         "1. company_name: Read the ACTUAL name printed at the top of this bill. Do NOT substitute a default.\n"
         "2. amount_before_tax: Find the subtotal or net amount BEFORE tax is added. NOT the grand total.\n"
-        "3. tax_amount: Sum CGST + SGST (or IGST). Include service charge if labelled as tax.\n"
-        "4. invoice_id: Look for Bill No, Invoice No, GST Invoice, Receipt No, Order ID.\n"
-        "5. expense_date: Find 'Date' or 'Bill Date'. Format YYYY-MM-DD.\n"
-        "6. start_date / end_date: Only populate if the document shows a travel/service date range.\n"
-        "7. currency: Detect from the receipt. Default 'INR' for Indian bills. Use 'USD', 'EUR', 'GBP' if explicit.\n"
-        "8. ocr_confidence: 0.92-0.98 for clear printed bill. 0.70-0.89 for low quality.\n\n"
+        "3. tax_amount: Sum CGST + SGST (or IGST).\n"
+        "4. total_receipt_amount: The absolute final amount paid on the bill.\n"
+        "5. invoice_id: Look for Bill No, Invoice No, GST Invoice, Receipt No, Order ID.\n"
+        "6. expense_date: Find 'Date' or 'Bill Date'. Format YYYY-MM-DD.\n"
+        "7. start_date / end_date: Only populate if the document shows a travel/service date range.\n"
+        "8. currency: Detect from the receipt. Default 'INR' for Indian bills. Use 'USD', 'EUR', 'GBP' if explicit.\n"
+        "9. ocr_confidence: 0.92-0.98 for clear printed bill. 0.70-0.89 for low quality.\n\n"
         "CRITICAL: You are reading this specific uploaded document. "
         "Extract the actual data. Do not invent or hallucinate values.\n\n"
         "Return ONLY the JSON object. No markdown, no code fences, no commentary.\n"
@@ -270,8 +266,22 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Gemini returned non-JSON output: {text[:200]}")
 
-    # Fix 3: map all new prompt fields back; support legacy keys for fallback
+    # --- NEW MATH CALCULATION FIX ---
+    amount_before_tax = _as_float(
+        data.get("amount_before_tax") if data.get("amount_before_tax") is not None
+        else data.get("total_amount", 0.0)
+    )
+    tax_amount = _as_float(data.get("tax_amount", 0.0))
+    total_receipt_amount = _as_float(data.get("total_receipt_amount", 0.0))
+
+    # Calculate other charges securely in Python
+    calculated_other_charges = round(total_receipt_amount - amount_before_tax - tax_amount, 2)
+    if calculated_other_charges < 0:
+        calculated_other_charges = 0.0
+    # ---------------------------------
+
     raw_currency = data.get("currency") or data.get("currency_code") or "INR"
+    
     return {
         "merchant_name": (
             str(data.get("company_name") or data.get("merchant_name", "")).strip()
@@ -282,12 +292,9 @@ def _gemini_extract_from_image(image_bytes: bytes, mime_type: str) -> dict[str, 
         "end_date": _as_date_iso(data.get("end_date", "")) if data.get("end_date") else None,
         "invoice_id": data.get("invoice_id"),
         "category": data.get("category"),
-        # Fix 3/4: use amount_before_tax; fall back to total_amount if old key present
-        "amount_before_tax": _as_float(
-            data.get("amount_before_tax") if data.get("amount_before_tax") is not None
-            else data.get("total_amount", 0.0)
-        ),
-        "tax_amount": _as_float(data.get("tax_amount", 0.0)),
+        "amount_before_tax": amount_before_tax,
+        "tax_amount": tax_amount,
+        "other_charges": calculated_other_charges, # Returning the computed value
         "currency_code": (str(raw_currency).strip() or "INR")[:3].upper(),
         "ocr_confidence": float(data.get("ocr_confidence", 0.95)) if data.get("ocr_confidence") is not None else 0.95,
         "tampering_detected": bool(data.get("tampering_detected", False)),
@@ -309,9 +316,9 @@ async def parse_receipt(file: UploadFile = File(...)):
             "extracted_data": {
                 "merchant_name": "ACT Fibernet",
                 "expense_date": "2026-03-01",
-                # Fix 3/4: 765.82 total = 649.00 subtotal + 116.82 tax
                 "amount_before_tax": 649.00,
                 "tax_amount": 116.82,
+                "other_charges": 0.0,
                 "currency_code": "INR",
                 "ocr_confidence": 0.98,
                 "tampering_detected": False,
@@ -320,7 +327,6 @@ async def parse_receipt(file: UploadFile = File(...)):
             }
         }
 
-    # Add custom filename mocks for robust developer testing
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
     is_dummy_key = not api_key or "your_gemini" in api_key or api_key == "placeholder"
     
@@ -334,6 +340,7 @@ async def parse_receipt(file: UploadFile = File(...)):
                     "expense_date": "2026-06-04",
                     "amount_before_tax": 1250.00,
                     "tax_amount": 225.00,
+                    "other_charges": 0.0,
                     "currency_code": "INR",
                     "ocr_confidence": 0.96,
                     "tampering_detected": False,
@@ -350,6 +357,7 @@ async def parse_receipt(file: UploadFile = File(...)):
                     "expense_date": "2026-06-03",
                     "amount_before_tax": 4500.00,
                     "tax_amount": 810.00,
+                    "other_charges": 0.0,
                     "currency_code": "INR",
                     "ocr_confidence": 0.98,
                     "tampering_detected": False,
@@ -366,6 +374,7 @@ async def parse_receipt(file: UploadFile = File(...)):
                     "expense_date": "2026-06-04",
                     "amount_before_tax": 438.10,
                     "tax_amount": 21.90,
+                    "other_charges": 0.0,
                     "currency_code": "INR",
                     "ocr_confidence": 0.95,
                     "tampering_detected": False,
@@ -374,7 +383,6 @@ async def parse_receipt(file: UploadFile = File(...)):
                 }
             }
 
-    # Handle PDFs — render all pages to PNG for Gemini vision
     if mime == "application/pdf" or filename.endswith(".pdf"):
         try:
             image_bytes = _render_pdf_to_png_bytes(raw)
@@ -387,7 +395,6 @@ async def parse_receipt(file: UploadFile = File(...)):
         img_mime = mime if mime.startswith("image/") else "image/jpeg"
         data = _gemini_extract_from_image(raw, img_mime)
 
-    # Test knobs (filename-based overrides for QA)
     if "tamper" in filename:
         data["tampering_detected"] = True
         data["ocr_confidence"] = min(float(data.get("ocr_confidence", 0.95)), 0.4)
@@ -401,9 +408,9 @@ async def parse_receipt(file: UploadFile = File(...)):
             "expense_date": data["expense_date"],
             "invoice_id": data.get("invoice_id"),
             "category": data.get("category"),
-            # Fix 3/4: return amount_before_tax (pre-tax subtotal), not the grand total
             "amount_before_tax": float(data["amount_before_tax"]),
             "tax_amount": float(data.get("tax_amount", 0.0)),
+            "other_charges": float(data.get("other_charges", 0.0)),
             "currency_code": data["currency_code"],
             "ocr_confidence": float(max(0.0, min(1.0, data["ocr_confidence"]))),
             "tampering_detected": bool(data["tampering_detected"]),
